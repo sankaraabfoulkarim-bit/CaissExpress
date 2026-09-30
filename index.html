@@ -1,0 +1,3485 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Caisse Express — DigiSolia</title>
+  <meta name="description" content="Caisse rapide pour commerçants : monnaie, ventes, tickets thermiques, synchronisation cloud. Abonnement par code. Fonctionne hors connexion.">
+  <meta name="theme-color" content="#146B3A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Caisse">
+  <style>
+    :root{
+      --paper:#F4F0E6; --card:#FFFFFF; --ink:#1D1B16; --ink-soft:#5F5A4E; --line:#D9D3C3;
+      --green:#146B3A; --green-deep:#0C4A29; --green-soft:#E3EFE4;
+      --red:#B3261E; --red-soft:#F9E9E6;
+      --amber:#9A6208; --amber-soft:#FBF2DF; --blue:#2456A6;
+      --radius:16px;
+      --shadow:4px 4px 0 rgba(29,27,22,.9);
+      --shadow-s:2px 2px 0 rgba(29,27,22,.85);
+    }
+    *{ margin:0; padding:0; box-sizing:border-box; }
+    [hidden]{ display:none !important; }
+    html{ -webkit-text-size-adjust:100%; }
+    body{
+      background:#E8E2D2; color:var(--ink);
+      font-family:"Archivo",system-ui,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+      font-size:16px; line-height:1.45; -webkit-tap-highlight-color:transparent;
+    }
+    button,input,select{ font-family:inherit; color:inherit; }
+    button{ cursor:pointer; }
+    b,strong{ font-weight:800; }
+    :focus-visible{ outline:3px solid var(--green); outline-offset:2px; }
+    .sr-only{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+    .muted{ color:var(--ink-soft); font-weight:600; }
+
+    .app{
+      background:var(--paper); max-width:620px; margin:0 auto;
+      min-height:100dvh; border-left:2px solid var(--ink); border-right:2px solid var(--ink);
+      position:relative;
+    }
+
+    /* ---------- En-tête ---------- */
+    .app-header{
+      position:sticky; top:0; z-index:20;
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:12px 18px 10px; background:var(--paper); border-bottom:2px solid var(--ink);
+    }
+    .brand{ user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+    .brand-name{ display:block; font-size:15px; font-weight:900; letter-spacing:.08em; }
+    .brand-shop{ display:block; font-size:13px; font-weight:600; color:var(--ink-soft); }
+    .hdr-actions{ display:flex; align-items:center; gap:10px; }
+    .hdr-btn{
+      width:38px; height:38px; flex:0 0 38px; display:grid; place-items:center;
+      background:var(--card); border:2px solid var(--ink); border-radius:10px; box-shadow:var(--shadow-s);
+    }
+    .hdr-btn svg{ width:19px; height:19px; }
+    .hdr-btn:active{ transform:translate(2px,2px); box-shadow:none; }
+    .conn{ display:flex; align-items:center; gap:8px; }
+    .conn-dot{ width:11px; height:11px; border-radius:50%; background:var(--green); border:2px solid var(--green-deep); }
+    .conn-label{ font-size:11.5px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--green-deep); }
+    .conn.online .conn-dot{ background:var(--blue); border-color:var(--blue); }
+    .conn.online .conn-label{ color:var(--blue); }
+
+    .exp-banner{
+      background:var(--amber-soft); color:var(--amber);
+      border:2px solid var(--amber); border-top:none;
+      padding:8px 16px; font-size:13px; font-weight:800; text-align:center; cursor:pointer;
+    }
+
+    /* ---------- Contenu ---------- */
+    main{ padding:18px 16px calc(120px + env(safe-area-inset-bottom)); }
+    .view{ display:none; }
+    .view.active{ display:block; animation:viewin .16s ease-out; }
+    @keyframes viewin{ from{ opacity:.4; transform:translateY(4px);} to{ opacity:1; transform:none;} }
+    .view-top{ display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+    .view-top h2{ font-size:21px; font-weight:900; letter-spacing:-.01em; }
+    .view-top .btn{ margin-left:auto; }
+    .btn-back{
+      width:42px; height:42px; flex:0 0 42px; display:grid; place-items:center;
+      background:var(--card); border:2px solid var(--ink); border-radius:50%; box-shadow:var(--shadow-s);
+    }
+    .btn-back svg{ width:20px; height:20px; }
+    .btn-back:active{ transform:translate(2px,2px); box-shadow:none; }
+
+    /* ---------- Boutons ---------- */
+    .btn{
+      display:inline-flex; align-items:center; justify-content:center; gap:8px;
+      min-height:50px; padding:12px 18px;
+      border:2px solid var(--ink); border-radius:14px;
+      background:var(--card); font-weight:800; font-size:15.5px; box-shadow:var(--shadow-s);
+      transition:transform .05s, box-shadow .05s;
+    }
+    .btn svg{ width:20px; height:20px; flex:0 0 20px; }
+    .btn:active{ transform:translate(2px,2px); box-shadow:none; }
+    .btn.primary{ background:var(--green); border-color:var(--green-deep); color:#fff; }
+    .btn.danger{ background:var(--red); border-color:var(--red); color:#fff; }
+    .btn.danger-ghost{ background:var(--red-soft); border-color:var(--red); color:var(--red); }
+    .btn.print{ background:var(--paper); }
+    .btn.big{ width:100%; font-size:17px; padding:16px; border-radius:16px; box-shadow:var(--shadow); }
+    .btn.big svg{ width:23px; height:23px; flex:0 0 23px; }
+    .btn.small{ min-height:42px; padding:8px 14px; font-size:14px; }
+    .btn.wide{ width:100%; }
+    .btn[disabled]{ opacity:.45; box-shadow:none; cursor:not-allowed; transform:none; }
+    .btn-stack{ display:grid; gap:10px; }
+    .btn-stack .btn{ width:100%; justify-content:flex-start; text-align:left; }
+    .validate-col{ display:grid; gap:10px; }
+    .btn-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+    .btn-row .btn{ flex:1 1 auto; }
+
+    /* ---------- Accueil ---------- */
+    .tiles{ display:grid; gap:14px; }
+    .tile{
+      display:flex; align-items:center; gap:14px; text-align:left; width:100%; padding:18px;
+      background:var(--card); border:2px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow);
+      transition:transform .05s, box-shadow .05s;
+    }
+    .tile:active{ transform:translate(3px,3px); box-shadow:1px 1px 0 rgba(29,27,22,.9); }
+    .tile-primary{ background:var(--green); border-color:var(--green-deep); color:#fff; }
+    .tile-primary .tile-body small{ color:rgba(255,255,255,.88); }
+    .tile-primary .tile-ico{ background:#fff; border-color:var(--green-deep); color:var(--green-deep); }
+    .tile-primary .tile-arrow{ color:rgba(255,255,255,.85); }
+    .tile-ico{
+      flex:0 0 48px; width:48px; height:48px; display:grid; place-items:center;
+      background:var(--paper); border:2px solid var(--ink); border-radius:12px;
+    }
+    .tile-ico svg{ width:26px; height:26px; }
+    .tile-body{ flex:1; min-width:0; }
+    .tile-body strong{ display:block; font-size:18px; font-weight:800; letter-spacing:-.01em; }
+    .tile-body small{ display:block; font-size:13px; font-weight:600; color:var(--ink-soft); margin-top:2px; }
+    .tile-arrow{ color:var(--ink-soft); flex:0 0 auto; }
+    .tile-arrow svg{ width:20px; height:20px; }
+
+    .day-card{
+      margin-top:20px; padding:16px; background:var(--card);
+      border:2px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow); cursor:pointer;
+    }
+    .day-card:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 rgba(29,27,22,.9); }
+    .day-head{ display:flex; justify-content:space-between; align-items:baseline; }
+    .day-title{ font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.07em; }
+    .day-date{ font-size:13px; font-weight:700; color:var(--ink-soft); }
+    .day-stats{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px; }
+    .day-stats b{ display:block; font-size:32px; font-weight:900; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+    .day-stats small{ font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); }
+    .demo-chip{
+      margin-top:12px; display:flex; align-items:center; justify-content:space-between; gap:10px;
+      font-size:12.5px; font-weight:800; color:var(--amber);
+      background:var(--amber-soft); border:2px dashed var(--amber); border-radius:12px; padding:8px 12px;
+    }
+    .demo-chip button{ font-size:12px; font-weight:800; color:#fff; background:var(--amber); border:none; border-radius:8px; padding:6px 10px; }
+
+    /* ---------- Cartes & champs ---------- */
+    .card{
+      background:var(--card); border:2px solid var(--ink); border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:16px;
+    }
+    .card + .card, .card + .result, .total-card + .card{ margin-top:14px; }
+    .card h3{ font-size:14px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; }
+    .field + .field{ margin-top:14px; }
+    .field label{
+      display:block; font-size:12.5px; font-weight:800;
+      text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin-bottom:6px;
+    }
+    .money-field{
+      display:flex; align-items:stretch;
+      background:var(--card); border:2px solid var(--ink); border-radius:12px; overflow:hidden;
+    }
+    .money-field:focus-within{ border-color:var(--green-deep); box-shadow:0 0 0 3px var(--green-soft); }
+    .money-field input{
+      flex:1; min-width:0; border:none; outline:none; background:transparent;
+      padding:12px 14px; font-size:22px; font-weight:800; font-variant-numeric:tabular-nums;
+    }
+    .money-field .unit{
+      display:flex; align-items:center; padding:0 14px;
+      font-size:16px; font-weight:800; color:var(--ink-soft); border-left:2px solid var(--line);
+    }
+    .card input[type="text"], .card input[type="search"]{
+      width:100%; min-height:50px; padding:12px 14px;
+      border:2px solid var(--line); border-radius:12px; font-size:16px; font-weight:600; background:var(--card);
+    }
+    .card input:focus, .card select:focus{ outline:none; border-color:var(--green-deep); box-shadow:0 0 0 3px var(--green-soft); }
+    .card select{
+      width:100%; min-height:50px; padding:12px;
+      border:2px solid var(--line); border-radius:12px;
+      font-size:16px; font-weight:700; background:var(--card);
+    }
+    .fixed-value{
+      min-height:50px; display:flex; align-items:center; padding:12px 14px;
+      background:var(--paper); border:2px solid var(--line); border-radius:12px;
+      font-weight:700; color:var(--ink-soft);
+    }
+    .hint{ margin-top:8px; font-size:12.5px; font-weight:600; color:var(--ink-soft); }
+
+    /* ---------- Boutons rapides ---------- */
+    .quick-row{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+    .quick-row button{
+      flex:1 1 auto; min-width:64px; padding:12px 8px;
+      background:var(--card); border:2px solid var(--ink); border-radius:12px;
+      font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; box-shadow:var(--shadow-s);
+    }
+    .quick-row button:active{ transform:translate(2px,2px); box-shadow:none; }
+    .quick-row .alt{ background:var(--paper); }
+    .quick-row .clear{ background:var(--red-soft); border-color:var(--red); color:var(--red); }
+
+    /* ---------- Résultats ---------- */
+    .result{
+      margin-top:14px; padding:18px 16px; text-align:center;
+      background:var(--card); border:2px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow);
+    }
+    .result-label{ display:block; font-size:13px; font-weight:900; letter-spacing:.09em; color:var(--ink-soft); }
+    .result-value{ display:block; margin-top:2px; }
+    .result-value b{
+      font-size:clamp(44px, 13vw, 62px); font-weight:900; letter-spacing:-.03em;
+      font-variant-numeric:tabular-nums; line-height:1.05; color:var(--ink);
+    }
+    .result-value i{ font-style:normal; font-size:16px; font-weight:800; color:var(--ink-soft); margin-left:6px; }
+    .result-note{ display:block; margin-top:4px; font-size:13.5px; font-weight:700; color:var(--ink-soft); }
+    .result.st-ok{ background:var(--green-soft); border-color:var(--green-deep); }
+    .result.st-ok .result-label, .result.st-ok .result-value b{ color:var(--green-deep); }
+    .result.st-exact{ background:var(--green-soft); border-color:var(--green-deep); }
+    .result.st-exact .result-label, .result.st-exact .result-value b{ color:var(--green-deep); }
+    .result.st-short{ background:var(--red-soft); border-color:var(--red); }
+    .result.st-short .result-label, .result.st-short .result-value b, .result.st-short .result-note{ color:var(--red); }
+    .result.st-empty .result-value b{ color:#A8A190; }
+
+    /* ---------- Décomposition ---------- */
+    .breakdown{ display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      padding:9px 13px; background:var(--card);
+      border:2px solid var(--ink); border-radius:12px; box-shadow:var(--shadow-s);
+      animation:pop .18s ease-out backwards;
+    }
+    @keyframes pop{ from{ opacity:0; transform:scale(.85) translateY(4px);} to{ opacity:1; transform:none;} }
+    .chip-ico{ display:grid; place-items:center; color:var(--ink-soft); }
+    .chip-ico svg{ width:18px; height:18px; }
+    .chip b{ font-size:14px; font-weight:800; color:var(--ink-soft); font-variant-numeric:tabular-nums; }
+    .chip .chip-cut{ font-size:18px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+    .bd-remainder{ width:100%; font-size:14px; font-weight:700; color:var(--red); }
+
+    /* ---------- Vente ---------- */
+    .sale-line{
+      background:var(--card); border:2px solid var(--ink); border-radius:14px;
+      box-shadow:var(--shadow-s); padding:12px; margin-bottom:10px;
+    }
+    .sl-row1{ display:flex; align-items:center; gap:10px; }
+    .sl-name{
+      flex:1; min-width:0; min-height:46px; padding:10px 12px;
+      border:2px solid var(--line); border-radius:10px; font-size:16px; font-weight:700;
+    }
+    .sl-name:focus{ outline:none; border-color:var(--green-deep); }
+    .sl-sub{ display:flex; align-items:center; gap:8px; }
+    .sl-sub span{ font-size:17px; font-weight:900; font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .sl-del{
+      width:40px; height:40px; flex:0 0 40px; display:grid; place-items:center;
+      background:var(--red-soft); border:2px solid var(--red); border-radius:10px; color:var(--red);
+    }
+    .sl-del svg{ width:18px; height:18px; }
+    .sl-del:active{ transform:scale(.94); }
+    .sl-row2{ display:flex; align-items:flex-end; gap:10px; margin-top:10px; }
+    .sl-row2 label{ flex:1; display:block; font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-soft); }
+    .sl-row2 label:first-child{ flex:0 0 92px; }
+    .sl-row2 input{
+      display:block; width:100%; margin-top:4px; min-height:44px; padding:9px 12px;
+      border:2px solid var(--line); border-radius:10px;
+      font-size:16px; font-weight:700; font-variant-numeric:tabular-nums;
+    }
+    .sl-row2 input:focus{ outline:none; border-color:var(--green-deep); }
+    .sl-x{ padding-bottom:12px; font-weight:800; color:var(--ink-soft); }
+    .add-item{
+      width:100%; padding:14px; margin-bottom:14px;
+      background:transparent; border:2px dashed var(--ink-soft); border-radius:14px;
+      font-size:15px; font-weight:800; color:var(--green-deep);
+    }
+    .add-item:active{ background:var(--green-soft); }
+
+    .total-card{
+      display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+      padding:14px 18px; background:var(--ink); color:var(--paper);
+      border:2px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow);
+    }
+    .total-label{ font-size:14px; font-weight:900; letter-spacing:.1em; }
+    .total-value b{ font-size:38px; font-weight:900; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+    .total-value i{ font-style:normal; font-size:15px; font-weight:700; color:#CFC9B8; margin-left:6px; }
+
+    /* ---------- Historique ---------- */
+    .summary{
+      background:var(--card); border:2px solid var(--ink); border-radius:var(--radius);
+      box-shadow:var(--shadow); padding:14px 16px;
+    }
+    .summary-title{ display:flex; justify-content:space-between; align-items:baseline; font-size:13px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; }
+    .summary-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+    .summary-grid > div{ padding:10px 12px; border:2px solid var(--line); border-radius:10px; }
+    .summary-grid b{ display:block; font-size:22px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+    .summary-grid small{ font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); }
+
+    .filters{ margin:14px 0; }
+    .filters input[type="search"]{
+      width:100%; min-height:50px; padding:12px 14px;
+      border:2px solid var(--ink); border-radius:12px; font-size:15px; font-weight:600; background:var(--card);
+    }
+    .filters input[type="search"]:focus{ outline:none; box-shadow:0 0 0 3px var(--green-soft); }
+    .filter-row{ display:flex; gap:8px; margin-top:8px; }
+    .filter-row input[type="date"]{
+      flex:1; min-width:0; padding:10px 12px;
+      border:2px solid var(--line); border-radius:12px;
+      font-size:14px; font-weight:700; background:var(--card); color:var(--ink);
+    }
+    .chip-btn{
+      padding:10px 14px; background:var(--card);
+      border:2px solid var(--ink); border-radius:999px;
+      font-size:13px; font-weight:800; box-shadow:var(--shadow-s);
+    }
+    .chip-btn.active{ background:var(--ink); color:var(--paper); }
+    .chip-btn:active{ transform:translate(2px,2px); box-shadow:none; }
+
+    .sales-list{ display:grid; gap:10px; }
+    .sale-row{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      width:100%; text-align:left; padding:12px 14px;
+      background:var(--card); border:2px solid var(--ink); border-radius:14px; box-shadow:var(--shadow-s);
+    }
+    .sale-row:active{ transform:translate(2px,2px); box-shadow:none; }
+    .sr-left b{ display:block; font-size:15.5px; font-weight:900; }
+    .sr-left small, .sr-right small{ display:block; font-size:12.5px; font-weight:600; color:var(--ink-soft); margin-top:1px; }
+    .sr-right{ text-align:right; }
+    .sr-right b{ display:block; font-size:19px; font-weight:900; font-variant-numeric:tabular-nums; letter-spacing:-.01em; }
+    .empty{
+      padding:28px 20px; text-align:center;
+      border:2px dashed var(--line); border-radius:var(--radius); background:var(--card);
+    }
+    .empty b{ display:block; font-size:16px; }
+    .empty span{ display:block; margin-top:4px; font-size:13.5px; font-weight:600; color:var(--ink-soft); }
+
+    /* ---------- Paramètres ---------- */
+    .cut-row{
+      display:flex; align-items:center; justify-content:space-between; gap:12px;
+      padding:11px 0; border-bottom:2px solid var(--line); cursor:pointer;
+    }
+    .cut-row:last-child{ border-bottom:none; }
+    .cut-info b{ font-size:16.5px; font-weight:900; font-variant-numeric:tabular-nums; }
+    .cut-info small{ margin-left:8px; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft); }
+    .cut-row input{ width:22px; height:22px; accent-color:var(--green); cursor:pointer; }
+    .about{
+      margin-top:18px; padding:16px;
+      background:var(--card); border:2px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow);
+    }
+    .about b{ display:block; font-size:16px; font-weight:900; }
+    .about span{ display:block; margin-top:6px; font-size:13px; font-weight:600; color:var(--ink-soft); }
+
+    .badge{ display:inline-block; padding:4px 12px; border-radius:999px; font-size:12.5px; font-weight:800; border:2px solid; }
+    .badge.ok{ background:var(--green-soft); color:var(--green-deep); border-color:var(--green-deep); }
+    .badge.warn{ background:var(--amber-soft); color:var(--amber); border-color:var(--amber); }
+    .badge.err{ background:var(--red-soft); color:var(--red); border-color:var(--red); }
+    .sub-info{ margin-top:10px; font-size:13.5px; font-weight:600; color:var(--ink-soft); }
+    .sub-info b{ color:var(--ink); }
+    .team-row{ display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:2px solid var(--line); }
+    .team-row:last-child{ border-bottom:none; }
+    .team-main{ flex:1; min-width:0; }
+    .team-main b{ display:block; font-size:15.5px; font-weight:900; }
+    .team-main small{ font-size:12px; font-weight:600; color:var(--ink-soft); }
+    .mini-btn{
+      width:38px; height:38px; flex:0 0 38px; display:grid; place-items:center;
+      background:var(--paper); border:2px solid var(--ink); border-radius:10px;
+    }
+    .mini-btn svg{ width:17px; height:17px; }
+    .mini-btn.danger{ background:var(--red-soft); border-color:var(--red); color:var(--red); }
+    .mini-btn:active{ transform:scale(.94); }
+    body[data-role="cashier"] .admin-only{ display:none !important; }
+
+    /* ---------- Navigation basse ---------- */
+    .tabbar{
+      position:fixed; bottom:0; left:50%; transform:translateX(-50%);
+      width:min(100%, 620px); z-index:30;
+      display:grid; grid-template-columns:repeat(4,1fr);
+      background:var(--card); border-top:2px solid var(--ink);
+      padding-bottom:env(safe-area-inset-bottom);
+    }
+    .tabbar button{
+      position:relative; display:grid; justify-items:center; gap:3px;
+      padding:10px 0 9px; background:none; border:none;
+      font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color:var(--ink-soft);
+    }
+    .tabbar button svg{ width:23px; height:23px; }
+    .tabbar button.active{ color:var(--green-deep); }
+    .tabbar button.active::before{ content:''; position:absolute; top:-2px; left:18%; right:18%; height:3px; background:var(--green); }
+
+    /* ---------- Modales ---------- */
+    .modal-overlay{
+      position:fixed; inset:0; z-index:140;
+      background:rgba(29,27,22,.55); display:grid; place-items:center; padding:20px;
+    }
+    .modal{
+      width:min(480px,100%); max-height:85dvh; overflow:auto;
+      background:var(--card); border:2px solid var(--ink); border-radius:20px;
+      box-shadow:6px 6px 0 rgba(29,27,22,.9); padding:20px; animation:pop .18s ease-out;
+    }
+    .m-eyebrow{ font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:var(--ink-soft); }
+    .m-title{ margin-top:2px; font-size:21px; font-weight:900; letter-spacing:-.01em; }
+    .m-text{ margin-top:8px; font-size:14.5px; font-weight:600; color:var(--ink-soft); }
+    .m-items{ margin:12px 0 4px; }
+    .m-item{
+      display:flex; align-items:baseline; gap:10px;
+      padding:9px 0; border-bottom:2px solid var(--line); font-size:14.5px;
+    }
+    .m-item:last-child{ border-bottom:none; }
+    .mi-name{ flex:1; min-width:0; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .mi-qty{ font-size:13px; font-weight:600; color:var(--ink-soft); font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .m-item b{ font-variant-numeric:tabular-nums; white-space:nowrap; }
+    .m-kv{ display:flex; justify-content:space-between; align-items:baseline; padding:9px 0; border-top:2px solid var(--line); font-size:14.5px; font-weight:700; color:var(--ink-soft); }
+    .m-kv b{ font-size:18px; font-weight:900; color:var(--ink); font-variant-numeric:tabular-nums; }
+    .m-actions{ display:flex; gap:10px; margin-top:16px; }
+    .m-actions .btn{ flex:1; }
+    .modal .result{ box-shadow:none; margin-top:14px; }
+    .modal .breakdown{ margin-top:12px; }
+    .modal select{
+      width:100%; min-height:50px; padding:12px;
+      border:2px solid var(--ink); border-radius:12px;
+      font-size:16px; font-weight:700; background:var(--card); margin-bottom:10px;
+    }
+    .modal .btn.wide{ margin-top:12px; }
+
+    /* ---------- Super Admin ---------- */
+    .sa-sec{ border-top:2px solid var(--line); margin-top:16px; padding-top:14px; text-align:left; }
+    .sa-sec h4{ font-size:12px; font-weight:900; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin-bottom:8px; }
+    .btn-row.col{ flex-direction:column; }
+    .btn-row.col .btn{ width:100%; justify-content:flex-start; text-align:left; }
+    .gen-code{
+      margin-top:8px; padding:14px; background:var(--paper);
+      border:2px dashed var(--ink); border-radius:14px;
+      font-size:25px; font-weight:900; letter-spacing:.12em; text-align:center; user-select:all;
+    }
+    .sa-row{ display:flex; align-items:baseline; gap:10px; padding:8px 0; border-bottom:2px solid var(--line); font-size:14px; }
+    .sa-row:last-child{ border-bottom:none; }
+    .sa-row b{ letter-spacing:.06em; font-variant-numeric:tabular-nums; }
+    .sa-row span{ flex:1; font-size:12.5px; font-weight:700; color:var(--ink-soft); }
+    .sa-row small{ font-size:12px; font-weight:600; color:var(--ink-soft); }
+
+    /* ---------- Écran de verrouillage ---------- */
+    .lockscreen{
+      position:fixed; inset:0; z-index:100; background:var(--paper);
+      display:flex; align-items:center; justify-content:center; padding:24px; overflow:auto;
+    }
+    .lock-inner{ width:min(400px,100%); text-align:center; }
+    .lock-logo{
+      width:76px; height:76px; margin:0 auto 12px;
+      background:var(--green); border:2px solid var(--ink); border-radius:20px;
+      display:grid; place-items:center; color:#fff; box-shadow:var(--shadow);
+    }
+    .lock-logo svg{ width:40px; height:40px; }
+    .lock-brand{ font-size:26px; font-weight:900; letter-spacing:.08em; user-select:none; -webkit-user-select:none; touch-action:manipulation; }
+    .lock-sub{ font-size:13px; font-weight:800; color:var(--ink-soft); letter-spacing:.14em; text-transform:uppercase; margin-top:2px; }
+    .lock-shop{ margin-top:14px; font-size:17px; font-weight:900; }
+    .lock-badge{ margin-top:8px; }
+    .lock-q{ margin:18px 0 12px; font-size:19px; font-weight:900; }
+    .lock-status{ display:inline-block; margin:14px 0 6px; padding:6px 14px; border-radius:999px; font-size:13px; font-weight:800; }
+    .lock-status.err{ background:var(--red-soft); color:var(--red); border:2px solid var(--red); }
+    .lock-form{
+      margin-top:14px; text-align:left;
+      background:var(--card); border:2px solid var(--ink); border-radius:var(--radius); box-shadow:var(--shadow); padding:16px;
+    }
+    .lock-label{ display:block; font-size:12.5px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin-bottom:6px; }
+    .act-input{
+      width:100%; min-height:56px; text-align:center; font-size:18px; font-weight:900;
+      letter-spacing:.06em;
+      border:2px solid var(--ink); border-radius:14px; background:var(--card);
+    }
+    .act-input:focus{ outline:none; border-color:var(--green-deep); box-shadow:0 0 0 3px var(--green-soft); }
+    .lock-form .btn.primary{ width:100%; margin-top:12px; }
+    .lock-form .hint{ margin-top:10px; }
+    .lock-form .btn.ghost{ width:100%; margin-top:10px; }
+    .profile-list{ display:grid; gap:10px; }
+    .profile-btn{
+      display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:14px;
+      background:var(--card); border:2px solid var(--ink); border-radius:14px; box-shadow:var(--shadow);
+    }
+    .profile-btn:active{ transform:translate(3px,3px); box-shadow:1px 1px 0 rgba(29,27,22,.9); }
+    .profile-btn svg{ width:22px; height:22px; flex:0 0 22px; }
+    .profile-btn b{ display:block; font-size:16.5px; font-weight:900; }
+    .profile-btn small{ display:block; font-size:12px; font-weight:600; color:var(--ink-soft); }
+    .profile-btn.admin{ background:var(--green); border-color:var(--green-deep); color:#fff; }
+    .profile-btn.admin small{ color:rgba(255,255,255,.85); }
+    .lock-inner > .btn.ghost{ margin-top:14px; }
+
+    /* ---------- Pavé PIN ---------- */
+    .pin-overlay{
+      position:fixed; inset:0; z-index:150;
+      background:rgba(29,27,22,.55); display:grid; place-items:center; padding:20px;
+    }
+    .pin-card{
+      width:min(320px,100%); background:var(--card); border:2px solid var(--ink); border-radius:20px;
+      box-shadow:6px 6px 0 rgba(29,27,22,.9); padding:20px; text-align:center; animation:pop .18s ease-out;
+    }
+    .pin-title{ font-size:18px; font-weight:900; }
+    .pin-sub{ margin-top:2px; font-size:13px; font-weight:700; color:var(--ink-soft); min-height:18px; }
+    .pin-dots{ display:flex; justify-content:center; gap:12px; margin:16px 0 4px; min-height:16px; }
+    .pin-dot{ width:14px; height:14px; border:2px solid var(--ink); border-radius:50%; }
+    .pin-dot.filled{ background:var(--ink); }
+    .pin-dots.err .pin-dot{ border-color:var(--red); background:var(--red-soft); }
+    .pin-dots.err{ animation:shake .3s; }
+    @keyframes shake{ 0%,100%{ transform:translateX(0);} 25%{ transform:translateX(-6px);} 75%{ transform:translateX(6px);} }
+    .pin-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
+    .pin-grid button{
+      min-height:58px; border:2px solid var(--ink); border-radius:12px;
+      background:var(--card); font-size:23px; font-weight:800; box-shadow:var(--shadow-s);
+    }
+    .pin-grid button:active{ transform:translate(2px,2px); box-shadow:none; }
+    .pin-grid .fn{ font-size:16px; background:var(--paper); }
+    .pin-cancel{ margin-top:12px; background:none; border:none; font-size:14px; font-weight:800; color:var(--ink-soft); text-decoration:underline; }
+
+    /* ---------- Toasts ---------- */
+    .toasts{
+      position:fixed; left:50%; transform:translateX(-50%);
+      bottom:calc(88px + env(safe-area-inset-bottom)); z-index:160;
+      display:grid; gap:8px; width:min(92%, 420px);
+    }
+    .toast{
+      display:flex; align-items:center; gap:10px;
+      background:var(--ink); color:var(--paper);
+      padding:12px 16px; border-radius:12px;
+      font-size:14px; font-weight:700; box-shadow:var(--shadow-s);
+      animation:pop .18s ease-out;
+    }
+    .toast.out{ opacity:0; transition:opacity .3s; }
+    .toast svg{ width:18px; height:18px; flex:0 0 18px; }
+    .toast-ok svg{ color:#7BD8A0; }
+    .toast-err svg{ color:#FF9B90; }
+    .toast-warn svg{ color:#F2C561; }
+
+    @media (prefers-reduced-motion: reduce){
+      *{ animation:none !important; transition:none !important; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <div class="brand" id="header-brand">
+      <span class="brand-name">CAISSE EXPRESS</span>
+      <span class="brand-shop" id="header-shop">—</span>
+    </div>
+    <div class="hdr-actions">
+      <button class="hdr-btn" id="btn-lock" type="button" aria-label="Verrouiller la session">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3"/></svg>
+      </button>
+      <div class="conn" id="conn-status" role="status">
+        <span class="conn-dot"></span><span class="conn-label">Mode hors connexion</span>
+      </div>
+    </div>
+  </header>
+  <div class="exp-banner admin-only" id="exp-banner" hidden></div>
+
+  <main id="main">
+
+    <!-- ================= ACCUEIL ================= -->
+    <section class="view active" id="view-home">
+      <h1 class="sr-only">Accueil</h1>
+      <div class="tiles">
+        <button class="tile tile-primary" id="tile-money" type="button">
+          <span class="tile-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/></svg>
+          </span>
+          <span class="tile-body">
+            <strong>Calculer la monnaie</strong>
+            <small>Rendre l'appoint en 2 secondes</small>
+          </span>
+          <span class="tile-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+
+        <button class="tile" id="tile-sale" type="button">
+          <span class="tile-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/></svg>
+          </span>
+          <span class="tile-body">
+            <strong>Nouvelle vente</strong>
+            <small>Plusieurs articles, ticket en option</small>
+          </span>
+          <span class="tile-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+
+        <button class="tile" id="tile-history" type="button">
+          <span class="tile-ico">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>
+          </span>
+          <span class="tile-body">
+            <strong>Historique</strong>
+            <small>Ventes, recherche, réimpression</small>
+          </span>
+          <span class="tile-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span>
+        </button>
+      </div>
+
+      <div class="day-card admin-only" id="day-card" role="button" tabindex="0" aria-label="Voir l'historique">
+        <div class="day-head">
+          <span class="day-title">Aujourd'hui</span>
+          <span class="day-date" id="day-date"></span>
+        </div>
+        <div class="day-stats">
+          <div><b id="day-count">0</b><small>ventes</small></div>
+          <div><b id="day-revenue">0 F</b><small>chiffre d'affaires</small></div>
+        </div>
+        <div class="demo-chip" id="demo-chip" hidden>
+          Données de démonstration
+          <button type="button" id="demo-clear">Retirer</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CALCUL DE MONNAIE ============ -->
+    <section class="view" id="view-money">
+      <div class="view-top">
+        <button class="btn-back" id="money-back" type="button" aria-label="Retour">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M11 6l-6 6 6 6"/></svg>
+        </button>
+        <h2>Calculer la monnaie</h2>
+      </div>
+
+      <div class="card">
+        <div class="field">
+          <label for="pay-amount">Montant à payer</label>
+          <div class="money-field">
+            <input id="pay-amount" inputmode="numeric" autocomplete="off" placeholder="0">
+            <span class="unit">F</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="recv-amount">Montant reçu</label>
+          <div class="money-field">
+            <input id="recv-amount" inputmode="numeric" autocomplete="off" placeholder="0">
+            <span class="unit">F</span>
+          </div>
+          <div class="quick-row" id="quick-money">
+            <button type="button" data-add="500">+500</button>
+            <button type="button" data-add="1000">+1 000</button>
+            <button type="button" data-add="2000">+2 000</button>
+            <button type="button" data-add="5000">+5 000</button>
+            <button type="button" data-add="10000">+10 000</button>
+            <button type="button" class="alt" id="btn-equal">Reçu = à payer</button>
+            <button type="button" class="clear" id="btn-clear-money">Effacer</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="result st-empty" id="money-result">
+        <span class="result-label">MONNAIE À RENDRE</span>
+        <span class="result-value"><b>—</b><i>F CFA</i></span>
+        <span class="result-note">Saisissez les montants ci-dessus</span>
+      </div>
+      <div class="breakdown" id="money-breakdown" aria-live="polite"></div>
+    </section>
+
+    <!-- ================= VENTE ================= -->
+    <section class="view" id="view-sale">
+      <div class="view-top">
+        <h2>Nouvelle vente</h2>
+        <button class="btn ghost small" id="btn-reset-sale" type="button">Vider</button>
+      </div>
+
+      <div id="sale-items"></div>
+      <button class="add-item" id="btn-add-item" type="button">+ Ajouter un article</button>
+
+      <div class="total-card">
+        <span class="total-label">TOTAL</span>
+        <span class="total-value"><b id="sale-total">0</b><i>F CFA</i></span>
+      </div>
+
+      <div class="card">
+        <div class="field">
+          <label for="sale-received">Montant reçu</label>
+          <div class="money-field">
+            <input id="sale-received" inputmode="numeric" autocomplete="off" placeholder="0">
+            <span class="unit">F</span>
+          </div>
+          <div class="quick-row" id="quick-sale">
+            <button type="button" data-add="500">+500</button>
+            <button type="button" data-add="1000">+1 000</button>
+            <button type="button" data-add="2000">+2 000</button>
+            <button type="button" data-add="5000">+5 000</button>
+            <button type="button" data-add="10000">+10 000</button>
+            <button type="button" class="alt" id="btn-sale-equal">Reçu = total</button>
+          </div>
+          <p class="hint">Champ vide = compte exact (reçu = total).</p>
+        </div>
+      </div>
+
+      <div class="result st-empty" id="sale-result">
+        <span class="result-label">MONNAIE À RENDRE</span>
+        <span class="result-value"><b>—</b><i>F CFA</i></span>
+        <span class="result-note">Ajoutez des articles</span>
+      </div>
+      <div class="breakdown" id="sale-breakdown" aria-live="polite"></div>
+
+      <div class="validate-col">
+        <button class="btn primary big" id="btn-validate" type="button" disabled>Valider la vente</button>
+        <button class="btn print big" id="btn-validate-print" type="button" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 8V4h10v4"/><rect x="4.5" y="8" width="15" height="8" rx="2"/><path d="M7.5 13.5h9v7h-9Z"/></svg>
+          Valider &amp; imprimer le ticket
+        </button>
+      </div>
+    </section>
+
+    <!-- ================ HISTORIQUE ================ -->
+    <section class="view" id="view-history">
+      <div class="view-top">
+        <h2>Historique</h2>
+        <button class="btn primary small" id="btn-new-sale-hist" type="button">+ Nouvelle vente</button>
+      </div>
+
+      <div class="summary admin-only">
+        <div class="summary-title"><span>Résumé du jour</span><span class="muted" id="summary-date"></span></div>
+        <div class="summary-grid">
+          <div><b id="sum-count">0</b><small>Ventes</small></div>
+          <div><b id="sum-total">0 F</b><small>Total vendu</small></div>
+          <div><b id="sum-received">0 F</b><small>Total encaissé</small></div>
+          <div><b id="sum-change">0 F</b><small>Monnaies rendues</small></div>
+        </div>
+      </div>
+
+      <div class="filters">
+        <input id="hist-q" type="search" placeholder="Rechercher (n°, article, caissier…)" autocomplete="off">
+        <div class="filter-row">
+          <input id="hist-date" type="date" aria-label="Filtrer par date">
+          <button class="chip-btn active" id="hist-today" type="button">Aujourd'hui</button>
+          <button class="chip-btn" id="hist-all" type="button">Tout</button>
+        </div>
+      </div>
+
+      <div class="sales-list" id="hist-list"></div>
+      <div class="empty" id="hist-empty" hidden>
+        <b>Aucune vente trouvée</b>
+        <span>Modifiez la recherche ou enregistrez une nouvelle vente.</span>
+      </div>
+    </section>
+
+    <!-- ================= PARAMÈTRES ================= -->
+    <section class="view" id="view-settings">
+      <div class="view-top"><h2>Paramètres</h2></div>
+
+      <div class="card admin-only">
+        <h3>Abonnement</h3>
+        <div id="sub-status"></div>
+        <button class="btn ghost wide" id="btn-enter-code" type="button" style="margin-top:12px">Entrer un code d'activation</button>
+      </div>
+
+      <div class="card admin-only">
+        <h3>Équipe</h3>
+        <div class="team-row">
+          <div class="team-main"><b>Administrateur</b><small>Suivi des recettes, réglages et caissiers</small></div>
+          <button class="mini-btn" id="btn-admin-pin" type="button" aria-label="Modifier le PIN administrateur">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="4"/><path d="M10.5 12.5 20 3M16 7l3 3M13 10l2 2"/></svg>
+          </button>
+        </div>
+        <div id="team-list"></div>
+        <button class="btn ghost wide" id="btn-add-cashier" type="button" style="margin-top:10px">+ Ajouter un caissier</button>
+      </div>
+
+      <div class="card admin-only">
+        <h3>Synchronisation cloud</h3>
+        <div class="fixed-value" id="sync-status">…</div>
+        <p class="hint" id="sync-detail"></p>
+        <div class="btn-row">
+          <button class="btn ghost" id="btn-sync-toggle" type="button">Activer</button>
+          <button class="btn ghost" id="btn-sync-now" type="button">Synchroniser</button>
+          <button class="btn ghost" id="btn-sync-id" type="button">Copier l'ID boutique</button>
+        </div>
+        <button class="btn ghost wide" id="btn-sync-join" type="button" style="margin-top:8px">Relier un autre appareil…</button>
+        <p class="hint">Les ventes s'enregistrent d'abord sur l'appareil : tout marche même sans Internet. La synchronisation relie les appareils d'une même boutique et permet le suivi des recettes à distance par DigiSolia.</p>
+      </div>
+
+      <div class="card">
+        <h3>Imprimante thermique</h3>
+        <div class="fixed-value" id="prt-status">Aucune imprimante appairée sur cette session</div>
+        <div class="field" style="margin-top:12px">
+          <label for="prt-width">Largeur du papier</label>
+          <select id="prt-width">
+            <option value="58">58 mm — tickets étroits (32 caractères)</option>
+            <option value="80">80 mm — POS80 (48 caractères)</option>
+          </select>
+        </div>
+        <div class="btn-row">
+          <button class="btn ghost" id="prt-connect" type="button">Connecter l'imprimante</button>
+          <button class="btn ghost" id="prt-test" type="button">Page de test</button>
+        </div>
+        <p class="hint">Bluetooth via Chrome (Android, Windows, macOS) — l'imprimante doit être en mode Bluetooth Basse Énergie (BLE).</p>
+      </div>
+
+      <div class="card">
+        <h3>Boutique</h3>
+        <div class="field admin-only">
+          <label for="set-shop">Nom de la boutique</label>
+          <input id="set-shop" type="text" maxlength="40" autocomplete="off">
+        </div>
+        <div class="field">
+          <label>Devise</label>
+          <div class="fixed-value">F CFA — Franc CFA (UEMOA)</div>
+        </div>
+      </div>
+
+      <div class="card admin-only">
+        <h3>Coupures disponibles</h3>
+        <p class="hint">Décochez les coupures que vous n'utilisez pas : la décomposition de la monnaie s'adapte automatiquement.</p>
+        <div id="cuts-list"></div>
+      </div>
+
+      <div class="card admin-only">
+        <h3>Données</h3>
+        <div class="btn-stack">
+          <button class="btn ghost" id="btn-export-csv" type="button">Exporter les ventes (CSV)</button>
+          <button class="btn ghost" id="btn-export-json" type="button">Sauvegarder (JSON)</button>
+          <button class="btn ghost" id="btn-import" type="button">Restaurer une sauvegarde JSON</button>
+          <button class="btn danger-ghost" id="btn-reset-data" type="button">Réinitialiser les ventes et réglages</button>
+        </div>
+        <p class="hint">La réinitialisation conserve l'abonnement et l'équipe. Si la synchronisation est active, la suppression est aussi propagée au cloud.</p>
+      </div>
+
+      <div class="card">
+        <h3>Application</h3>
+        <button class="btn ghost wide" id="btn-install" type="button">Installer l'application</button>
+        <p class="hint" id="install-hint">Sur Android : menu ⋮ de Chrome, puis « Installer l'application » ou « Ajouter à l'écran d'accueil ».</p>
+      </div>
+
+      <div class="about">
+        <b>Caisse Express — DigiSolia</b>
+        <span>Version 2.2.1 · Hors connexion + synchronisation Firebase · Tickets thermiques 58/80 mm</span>
+        <span>Vos ventes restent d'abord sur votre téléphone (IndexedDB). Si la synchronisation est activée, un résumé et l'historique sont copiés sur Firebase pour le suivi multi-appareils.</span>
+        <span>Prochainement : scanner de codes-barres, gestion de stock et produits, statistiques, dépenses et bénéfice, gestion des licences à distance, caisse à monnaie.</span>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="Navigation principale">
+    <button type="button" data-nav="home" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v10h13V10"/></svg>
+      <span>Accueil</span>
+    </button>
+    <button type="button" data-nav="sale">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h6"/></svg>
+      <span>Vente</span>
+    </button>
+    <button type="button" data-nav="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></svg>
+      <span>Historique</span>
+    </button>
+    <button type="button" data-nav="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.8v2.8M12 18.4v2.8M2.8 12h2.8M18.4 12h2.8M5.5 5.5l2 2M16.5 16.5l2 2M18.5 5.5l-2 2M7.5 16.5l-2 2"/></svg>
+      <span>Paramètres</span>
+    </button>
+  </nav>
+</div>
+
+<!-- Verrouillage / activation / connexion -->
+<div class="lockscreen" id="lockscreen" hidden>
+  <div class="lock-inner">
+    <div class="lock-logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2Z"/><path d="M9 8h6M9 12h4"/></svg>
+    </div>
+    <h1 class="lock-brand" id="lock-brand">CAISSE EXPRESS</h1>
+    <p class="lock-sub">DigiSolia</p>
+    <div id="lock-body"></div>
+  </div>
+</div>
+
+<!-- Pavé PIN -->
+<div class="pin-overlay" id="pin-overlay" hidden>
+  <div class="pin-card" id="pin-card"></div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay" hidden>
+  <div class="modal" id="modal-card" role="dialog" aria-modal="true"></div>
+</div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+<datalist id="article-names"></datalist>
+<input type="file" id="file-import" accept=".json,application/json" hidden>
+
+<script>
+'use strict';
+/* =========================================================
+   CAISSE EXPRESS — DigiSolia · FICHIER UNIQUE v2.2.1
+   Corrections v2.2.1 :
+   - Panneau Super Admin visible par-dessus l'écran de
+     verrouillage (z-index : modales 140, PIN 150, toasts 160)
+   - Triple appui fiable (fenêtre 1 s + touch-action)
+   - Initialisation Firebase corrigée (FIREBASE_CONFIG)
+
+   §1 Moteur monétaire (CXMoney)
+   §2 SaaS / licences (CXSaaS)
+   §3 Impression thermique (CXPrt)
+   §3b Synchronisation cloud (CXSync) — Firebase, local-first
+   §4 Persistance IndexedDB (CXDB)
+   §5 Contrôleur d'interface
+   §6 PWA intégrée
+   ========================================================= */
+
+/* ═══════════ CONFIGURATION FIREBASE ═══════════
+   Une clé API Web Firebase est publique par conception :
+   la sécurité vient des RÈGLES FIRESTORE et de l'auth, pas
+   du secret de la clé. Voir règles fournies avec l'app. */
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAlX8WIGDZVJsOs6UfAPAZNM44i8rj6fow",
+  authDomain: "digita-7e87e.firebaseapp.com",
+  projectId: "digita-7e87e",
+  storageBucket: "digita-7e87e.firebasestorage.app",
+  messagingSenderId: "240439149256",
+  appId: "1:240439149256:web:a7014d244647aaa8e8dbfd",
+  measurementId: "G-P123ESVK0Q"
+};
+
+/* ============ §1 MOTEUR MONÉTAIRE (CXMoney) ============ */
+var CXMoney = (function () {
+  var NBSP = '\u00A0';
+  var MAX_AMOUNT = 999999999;
+
+  function toNumber(v) {
+    if (typeof v === 'number') return isFinite(v) ? v : 0;
+    if (typeof v !== 'string') return 0;
+    var n = parseFloat(v.replace(/[\s\u00A0\u202F]/g, '').replace(',', '.'));
+    return isFinite(n) ? n : 0;
+  }
+  function clampAmount(n) {
+    n = Math.round(toNumber(n));
+    if (n < 0) n = 0;
+    if (n > MAX_AMOUNT) n = MAX_AMOUNT;
+    return n;
+  }
+  function format(n) {
+    n = toNumber(n);
+    var neg = n < 0;
+    var s = Math.round(Math.abs(n)).toString().replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
+    return (neg ? '-' : '') + s;
+  }
+  function parseQty(v) { return toNumber(v); }
+
+  function breakdown(amount, denominations) {
+    var rest = clampAmount(amount);
+    var cuts = (Array.isArray(denominations) ? denominations : [])
+      .filter(function (d) { return d > 0 && isFinite(d); })
+      .slice().sort(function (a, b) { return b - a; });
+    var pieces = [];
+    for (var i = 0; i < cuts.length; i++) {
+      var c = cuts[i];
+      var q = Math.floor(rest / c);
+      if (q > 0) { pieces.push({ value: c, count: q }); rest -= q * c; }
+      if (rest === 0) break;
+    }
+    return { pieces: pieces, remainder: rest };
+  }
+
+  return {
+    NBSP: NBSP, MAX_AMOUNT: MAX_AMOUNT,
+    toNumber: toNumber, clampAmount: clampAmount,
+    format: format, parseQty: parseQty, breakdown: breakdown
+  };
+})();
+
+/* ============ §2 SaaS / LICENCES (CXSaaS) ============ */
+var CXSaaS = (function () {
+  var B32 = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  var PLAN_BITS = 0x20000000;
+
+  var PLANS = [
+    { name: 'Essai — 7 jours',        days: 7 },
+    { name: 'Mensuel — 30 jours',     days: 30 },
+    { name: 'Trimestriel — 90 jours', days: 90 },
+    { name: 'Annuel — 365 jours',     days: 365 },
+    { name: 'Perpétuel',              days: 0 }
+  ];
+
+  function normalize(raw) {
+    var s = String(raw || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (s.slice(0, 2) === 'CX') s = s.slice(2);
+    return s;
+  }
+  function make(planIdx) {
+    var rand = Math.floor(Math.random() * PLAN_BITS);
+    var data = planIdx * PLAN_BITS + rand;
+    var chars = [], d = data, i;
+    for (i = 0; i < 7; i++) { chars.push(B32[d % 32]); d = Math.floor(d / 32); }
+    var sum = 0;
+    for (i = 0; i < 7; i++) sum += B32.indexOf(chars[i]) * (i + 1);
+    var full = chars.join('') + B32[sum % 32];
+    return 'CX-' + full.slice(0, 4) + '-' + full.slice(4, 8);
+  }
+  function decode(raw) {
+    var s = normalize(raw);
+    if (s.length !== 8) return null;
+    var vals = [], i, v;
+    for (i = 0; i < 8; i++) {
+      v = B32.indexOf(s[i]);
+      if (v < 0) return null;
+      vals.push(v);
+    }
+    var sum = 0;
+    for (i = 0; i < 7; i++) sum += vals[i] * (i + 1);
+    if (sum % 32 !== vals[7]) return null;
+    var data = 0;
+    for (i = 6; i >= 0; i--) data = data * 32 + vals[i];
+    if (data >= PLAN_BITS * 8) return null;
+    var plan = Math.floor(data / PLAN_BITS);
+    if (plan > PLANS.length - 1) return null;
+    return { plan: plan };
+  }
+  function hashPin(pin) {
+    var s = 'CX::v1::' + String(pin == null ? '' : pin);
+    var h = 5381;
+    for (var i = 0; i < s.length; i++) { h = ((h * 33) ^ s.charCodeAt(i)) >>> 0; }
+    return 'h' + ('00000000' + h.toString(16)).slice(-8);
+  }
+
+  return { PLANS: PLANS, normalize: normalize, make: make, decode: decode, hashPin: hashPin };
+})();
+
+/* ============ §3 IMPRESSION THERMIQUE (CXPrt) ============ */
+var CXPrt = (function () {
+  var SVC = [
+    '0000ff00-0000-1000-8000-00805f9b34fb',
+    '0000ffe0-0000-1000-8000-00805f9b34fb',
+    '0000fff0-0000-1000-8000-00805f9b34fb',
+    '000018f0-0000-1000-8000-00805f9b34fb',
+    '0000fee7-0000-1000-8000-00805f9b34fb',
+    '0000ae00-0000-1000-8000-00805f9b34fb',
+    '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+    'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+    '6e400001-b5a3-f393-e0a9-e50e24dcca9e'
+  ];
+  var device = null, writer = null;
+
+  function supported() { return !!(navigator.bluetooth && navigator.bluetooth.requestDevice); }
+  function name() { return device ? (device.name || 'Imprimante BLE') : ''; }
+  function connected() { return !!(device && device.gatt && device.gatt.connected && writer); }
+  function onDisconnect() { writer = null; }
+
+  async function pick() {
+    if (!supported()) throw new Error('UNSUPPORTED');
+    var d = await navigator.bluetooth.requestDevice({
+      acceptAllDevices: true,
+      optionalServices: SVC
+    });
+    if (device && device !== d) {
+      try { device.removeEventListener('gattserverdisconnected', onDisconnect); } catch (e) {}
+    }
+    device = d;
+    device.addEventListener('gattserverdisconnected', onDisconnect);
+    await connect();
+    return name();
+  }
+  async function findWriter(server) {
+    var services = await server.getPrimaryServices();
+    for (var i = 0; i < services.length; i++) {
+      var chars;
+      try { chars = await services[i].getCharacteristics(); } catch (e) { continue; }
+      for (var j = 0; j < chars.length; j++) {
+        var p = chars[j].properties;
+        if (p.write || p.writeWithoutResponse) return chars[j];
+      }
+    }
+    return null;
+  }
+  async function connect() {
+    if (!device) throw new Error('NO-DEVICE');
+    writer = null;
+    var server = await device.gatt.connect();
+    writer = await findWriter(server);
+    if (!writer) throw new Error('NO-WRITER');
+  }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  async function send(bytes) {
+    if (!device) throw new Error('NO-DEVICE');
+    if (!writer || !device.gatt.connected) await connect();
+    var CHUNK = 20;
+    for (var i = 0; i < bytes.length; i += CHUNK) {
+      var part = bytes.subarray(i, Math.min(i + CHUNK, bytes.length));
+      var buf = part.buffer.slice(part.byteOffset, part.byteOffset + part.byteLength);
+      if (writer.properties.write) {
+        await writer.writeValue(buf);
+      } else {
+        await writer.writeValueWithoutResponse(buf);
+        await sleep(15);
+      }
+    }
+  }
+  function forget() {
+    try { if (device) device.forget(); } catch (e) {}
+    device = null; writer = null;
+  }
+
+  return {
+    supported: supported, pick: pick, send: send,
+    forget: forget, name: name, connected: connected
+  };
+})();
+
+/* ============ §3b SYNCHRONISATION CLOUD (CXSync) ============ */
+var CXSync = (function () {
+  var SDK = 'https://www.gstatic.com/firebasejs/10.12.2';
+  var loaded = false, auth = null, fdb = null;
+  var bridge = null, syncing = false, schedTimer = null;
+  var st = { status: 'off', lastError: '', lastSyncAt: 0 };
+
+  function num(v) { var n = Number(v); return isFinite(n) ? n : 0; }
+  function set(status, extra) {
+    st.status = status;
+    if (extra) Object.assign(st, extra);
+    if (bridge && bridge.onSyncState) bridge.onSyncState(Object.assign({}, st));
+  }
+  function loadScript(src) {
+    return new Promise(function (res, rej) {
+      var s = document.createElement('script');
+      s.src = src; s.async = true;
+      s.onload = function () { res(); };
+      s.onerror = function () { rej(new Error('LOAD ' + src)); };
+      document.head.appendChild(s);
+    });
+  }
+  async function ensureSDK() {
+    if (loaded) return;
+    set('connecting');
+    await loadScript(SDK + '/firebase-app-compat.js');
+    await loadScript(SDK + '/firebase-auth-compat.js');
+    await loadScript(SDK + '/firebase-firestore-compat.js');
+    if (!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    auth = firebase.auth();
+    fdb = firebase.firestore();
+    loaded = true;
+  }
+  async function ensureAuth() {
+    if (!auth.currentUser) await auth.signInAnonymously();
+  }
+  function deviceLabel() {
+    try {
+      var ua = navigator.userAgent;
+      var os = /Android/i.test(ua) ? 'Android' : /iPhone|iPad/i.test(ua) ? 'iOS'
+        : /Windows/i.test(ua) ? 'Windows' : /Mac/i.test(ua) ? 'macOS'
+        : /Linux/i.test(ua) ? 'Linux' : 'Web';
+      var br = /Edg\//i.test(ua) ? 'Edge' : /Chrome/i.test(ua) ? 'Chrome'
+        : /Firefox/i.test(ua) ? 'Firefox' : /Safari/i.test(ua) ? 'Safari' : 'Navigateur';
+      return os + ' · ' + br;
+    } catch (e) { return 'Appareil'; }
+  }
+  function friendly(e) {
+    var c = (e && e.code) || '', m = (e && e.message) || '';
+    if (c.indexOf('operation-not-allowed') !== -1) return "activez la connexion anonyme dans la console Firebase";
+    if (c.indexOf('permission-denied') !== -1) return "règles Firestore insuffisantes";
+    if (c.indexOf('unavailable') !== -1 || c.indexOf('network') !== -1) return "réseau injoignable";
+    if (c.indexOf('api-key') !== -1 || c.indexOf('invalid-credential') !== -1) return "configuration Firebase invalide";
+    if (m.indexOf('LOAD') === 0) return "impossible de charger le SDK (hors ligne ?)";
+    if (m === 'NO-SHOP') return "aucune boutique reliée";
+    return (m || c || 'erreur inconnue').slice(0, 90);
+  }
+
+  function attach(b) { bridge = b; }
+  function prime(lastSyncAt) {
+    var t = num(lastSyncAt);
+    if (t > st.lastSyncAt) st.lastSyncAt = t;
+  }
+  function status() { return Object.assign({}, st); }
+
+  function schedule(delay) {
+    if (!bridge || !bridge.isEnabled()) return;
+    clearTimeout(schedTimer);
+    schedTimer = setTimeout(function () { syncNow(true); }, delay || 4000);
+  }
+
+  async function pushSales(shopId) {
+    var all = await bridge.getAllSales();
+    var dirty = all.filter(function (s) { return s.dirty && s.uid; });
+    if (!dirty.length) return 0;
+    var batch = fdb.batch(), n = 0, total = 0;
+    for (var i = 0; i < dirty.length; i++) {
+      var s = Object.assign({}, dirty[i]);
+      delete s.id; delete s.dirty;
+      s.shopId = shopId;
+      s.syncedAt = Date.now();
+      batch.set(fdb.collection('shops').doc(shopId).collection('sales').doc(s.uid), s);
+      n++; total++;
+      if (n === 400) { await batch.commit(); batch = fdb.batch(); n = 0; }
+    }
+    if (n > 0) await batch.commit();
+    await bridge.markPushed(dirty.map(function (s) { return s.uid; }));
+    return total;
+  }
+
+  async function pullSales(shopId, lastPull) {
+    var snap = await fdb.collection('shops').doc(shopId).collection('sales')
+      .where('updatedAt', '>', lastPull || 0).get();
+    var docs = snap.docs.map(function (d) { return d.data(); })
+      .filter(function (r) { return r && r.uid; });
+    var maxTs = lastPull || 0, changed = 0;
+    for (var i = 0; i < docs.length; i++) {
+      var r = docs[i];
+      maxTs = Math.max(maxTs, num(r.updatedAt) || num(r.createdAt));
+      var ch = await bridge.upsertSale(r);
+      if (ch) changed++;
+    }
+    return { changed: changed, maxTs: maxTs };
+  }
+
+  async function writeSummary(shopId) {
+    var sum = await bridge.buildSummary();
+    sum.shopId = shopId;
+    sum.device = deviceLabel();
+    sum.appVersion = '2.2.1';
+    sum.lastSeen = Date.now();
+    await fdb.collection('shops').doc(shopId).set(sum, { merge: true });
+  }
+
+  async function syncNow(quiet) {
+    if (syncing) return { ok: false, reason: 'busy' };
+    if (!bridge || !bridge.isEnabled()) return { ok: false, reason: 'disabled' };
+    if (!navigator.onLine) { set('offline'); return { ok: false, reason: 'offline' }; }
+    syncing = true;
+    try {
+      await ensureSDK();
+      await ensureAuth();
+      var shopId = await bridge.getSetting('shopId', null);
+      if (!shopId) throw new Error('NO-SHOP');
+      var pushed = await pushSales(shopId);
+      var lastPull = await bridge.getSetting('lastPullAt', 0);
+      var res = await pullSales(shopId, lastPull);
+      if (res.maxTs > lastPull) await bridge.setSetting('lastPullAt', res.maxTs);
+      await writeSummary(shopId);
+      await bridge.purgeTombstones();
+      st.lastSyncAt = Date.now();
+      await bridge.setSetting('lastSyncAt', st.lastSyncAt);
+      set('ok', { lastError: '' });
+      if (res.changed > 0 && bridge.onDataChanged) bridge.onDataChanged();
+      if (!quiet && bridge.toastSync) bridge.toastSync(pushed, res.changed);
+      return { ok: true, pushed: pushed, pulled: res.changed };
+    } catch (e) {
+      st.lastError = friendly(e);
+      set('error');
+      if (!quiet && bridge.toastErr) bridge.toastErr(st.lastError);
+      return { ok: false, reason: st.lastError };
+    } finally { syncing = false; }
+  }
+
+  async function checkShop(id) {
+    await ensureSDK();
+    await ensureAuth();
+    var d = await fdb.collection('shops').doc(id).get();
+    return d.exists;
+  }
+
+  async function listShops() {
+    await ensureSDK();
+    await ensureAuth();
+    var snap = await fdb.collection('shops').orderBy('lastSeen', 'desc').limit(50).get();
+    return snap.docs.map(function (d) { return d.data(); });
+  }
+
+  return {
+    attach: attach, prime: prime, status: status,
+    schedule: schedule, syncNow: syncNow,
+    checkShop: checkShop, listShops: listShops, friendly: friendly
+  };
+})();
+
+/* ============ §4 PERSISTANCE INDEXEDDB (CXDB) ============ */
+var CXDB = (function () {
+  var DB_NAME = 'caisse-express';
+  var DB_VERSION = 1;
+  var dbPromise = null;
+
+  function open() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function (resolve, reject) {
+      if (!('indexedDB' in window)) { reject(new Error('IndexedDB indisponible')); return; }
+      var req = indexedDB.open(DB_NAME, DB_VERSION);
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains('sales')) {
+          var s = db.createObjectStore('sales', { keyPath: 'id', autoIncrement: true });
+          s.createIndex('byDate', 'date');
+          s.createIndex('byNumber', 'number');
+        }
+        if (!db.objectStoreNames.contains('settings')) {
+          db.createObjectStore('settings', { keyPath: 'key' });
+        }
+      };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { reject(req.error || new Error('Ouverture impossible')); };
+      req.onblocked = function () { reject(new Error('Base de données bloquée')); };
+    });
+    dbPromise.catch(function () { dbPromise = null; });
+    return dbPromise;
+  }
+  function tx(store, mode) {
+    return open().then(function (db) { return db.transaction(store, mode).objectStore(store); });
+  }
+  function reqToPromise(r) {
+    return new Promise(function (res, rej) {
+      r.onsuccess = function () { res(r.result); };
+      r.onerror = function () { rej(r.error); };
+    });
+  }
+
+  return {
+    addSale: function (sale) { return tx('sales', 'readwrite').then(function (st) { return reqToPromise(st.add(sale)); }); },
+    putSale: function (sale) { return tx('sales', 'readwrite').then(function (st) { return reqToPromise(st.put(sale)); }); },
+    deleteSale: function (id){ return tx('sales', 'readwrite').then(function (st) { return reqToPromise(st.delete(id)); }); },
+    getAllSales: function () { return tx('sales', 'readonly').then(function (st) { return reqToPromise(st.getAll()); }); },
+    clearSales: function ()  { return tx('sales', 'readwrite').then(function (st) { return reqToPromise(st.clear()); }); },
+    getSetting: function (key, def) {
+      return tx('settings', 'readonly')
+        .then(function (st) { return reqToPromise(st.get(key)); })
+        .then(function (row) { return (row && row.value !== undefined) ? row.value : def; })
+        .catch(function () { return def; });
+    },
+    setSetting: function (key, value) {
+      return tx('settings', 'readwrite').then(function (st) { return reqToPromise(st.put({ key: key, value: value })); });
+    }
+  };
+})();
+
+/* ============ §5 CONTRÔLEUR D'INTERFACE ============ */
+(function () {
+  var M  = CXMoney;
+  var DB = CXDB;
+  var S  = CXSaaS;
+  var P  = CXPrt;
+  var SY = CXSync;
+  if (!M || !DB || !S || !P || !SY) {
+    document.body.insertAdjacentHTML('beforeend',
+      '<p style="padding:24px;font-weight:700">Erreur de chargement des modules internes.</p>');
+    return;
+  }
+
+  /* ---------------- État & constantes ---------------- */
+  var ALL_CUTS = [10000, 5000, 2000, 1000, 500, 250, 200, 100, 50, 25, 10, 5];
+  var DEFAULT_SETTINGS = { shopName: 'Ma Boutique', cuts: ALL_CUTS.slice(), printerWidth: 80 };
+  var TRIAL_DAYS = 7;
+  var DEFAULT_SUPER_PIN = '761278';
+
+  var state = {
+    settings: JSON.parse(JSON.stringify(DEFAULT_SETTINGS)),
+    calc: { pay: 0, recv: 0 },
+    sale: { items: [], received: 0, total: 0 },
+    hist: { q: '', date: '', mode: 'day' },
+    installEvent: null,
+    license: null, trialStart: 0,
+    adminPinHash: null, cashiers: [], saasCodes: [],
+    superPinHash: null,
+    session: { role: null, name: null },
+    startView: '',
+    lastGenerated: '',
+    shopId: null, syncEnabled: false
+  };
+
+  var hooks = {
+    _m: {},
+    on: function (n, f) { (this._m[n] = this._m[n] || []).push(f); },
+    emit: function (n, p) {
+      (this._m[n] || []).forEach(function (f) {
+        try { f(p); } catch (e) { console.warn('[hook ' + n + ']', e); }
+      });
+    }
+  };
+
+  /* ---------------- Utilitaires ---------------- */
+  function $(s) { return document.querySelector(s); }
+  function $$(s) { return Array.prototype.slice.call(document.querySelectorAll(s)); }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function pad4(n) { return String(n).padStart(4, '0'); }
+  function todayISO(d) {
+    d = d || new Date();
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+  }
+  function frDate(iso) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return iso || '';
+    var p = iso.split('-');
+    return p[2] + '/' + p[1] + '/' + p[0];
+  }
+  function frDateTs(ts) {
+    var n = M.toNumber(ts);
+    return n ? frDate(todayISO(new Date(n))) : '—';
+  }
+  function timeAgo(ts) {
+    var n = M.toNumber(ts);
+    if (!n) return 'jamais';
+    var d = Date.now() - n;
+    if (d < 60e3) return "à l'instant";
+    if (d < 3600e3) return 'il y a ' + Math.floor(d / 60e3) + ' min';
+    if (d < 86400e3) return 'il y a ' + Math.floor(d / 3600e3) + ' h';
+    return 'le ' + frDateTs(n);
+  }
+  function uuid() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+      var r = Math.random() * 16 | 0;
+      return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+  function live(list) {
+    return (list || []).filter(function (s) { return !s.deleted; });
+  }
+  function norm(s) {
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+  function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmtQty(q) {
+    var n = M.toNumber(q);
+    if (n <= 0) return '1';
+    return Number.isInteger(n) ? String(n) : String(n).replace('.', ',');
+  }
+  function debounce(fn, ms) {
+    var t; return function () {
+      var a = arguments, self = this;
+      clearTimeout(t); t = setTimeout(function () { fn.apply(self, a); }, ms);
+    };
+  }
+  var uid = 0;
+  function nextId() { return 'l' + (++uid); }
+
+  var PATHS = {
+    bill:  '<rect x="2.5" y="6.5" width="19" height="11" rx="2"/><circle cx="12" cy="12" r="2.5"/>',
+    coin:  '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4"/>',
+    check: '<path d="M4.5 12.5l5 5L19.5 7"/>',
+    alert: '<path d="M12 3.5 22 20.5H2Z"/><path d="M12 10v4.5"/><path d="M12 17.8v.01"/>',
+    trash: '<path d="M4 7h16"/><path d="M9.5 7V4.5h5V7"/><path d="M6.5 7l1 13.5h9L17.5 7"/><path d="M10 11v6M14 11v6"/>',
+    edit:  '<path d="M4 20l4.5-1L20 7.5a2.1 2.1 0 0 0-3-3L5.5 16 4 20Z"/>',
+    user:  '<circle cx="12" cy="8" r="4"/><path d="M4.5 20c1.5-3.5 4.2-5 7.5-5s6 1.5 7.5 5"/>',
+    shield:'<path d="M12 3l7 2.5V11c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V5.5Z"/><path d="M9.5 11.5l2 2 3.5-3.5"/>',
+    print: '<path d="M7 8V4h10v4"/><rect x="4.5" y="8" width="15" height="8" rx="2"/><path d="M7.5 13.5h9v7h-9Z"/>',
+    cloud: '<path d="M7 18h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6 9.3 4.5 4.5 0 0 0 7 18Z"/>'
+  };
+  function icon(n) {
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + PATHS[n] + '</svg>';
+  }
+
+  function toast(msg, type) {
+    type = type || 'ok';
+    var t = document.createElement('div');
+    t.className = 'toast toast-' + type;
+    t.innerHTML = icon(type === 'ok' ? 'check' : 'alert') + '<span>' + escapeHtml(msg) + '</span>';
+    $('#toasts').appendChild(t);
+    setTimeout(function () {
+      t.classList.add('out');
+      setTimeout(function () { t.remove(); }, 320);
+    }, 2600);
+  }
+
+  /* ---------------- Modales ---------------- */
+  var overlay = $('#modal-overlay'), modalCard = $('#modal-card');
+  function openModal(html) {
+    modalCard.innerHTML = html;
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function closeModal() {
+    overlay.hidden = true;
+    modalCard.innerHTML = '';
+    if ($('#lockscreen').hidden) document.body.style.overflow = '';
+  }
+  overlay.addEventListener('click', function (e) { if (e.target === overlay) closeModal(); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') {
+      if (!$('#pin-overlay').hidden) { closePinPad(); return; }
+      if (!overlay.hidden) closeModal();
+    }
+  });
+  function confirmDialog(opts) {
+    openModal(
+      '<h3 class="m-title">' + escapeHtml(opts.title) + '</h3>' +
+      '<p class="m-text">' + escapeHtml(opts.message) + '</p>' +
+      '<div class="m-actions">' +
+        '<button class="btn ghost" id="m-cancel" type="button">Annuler</button>' +
+        '<button class="btn danger" id="m-ok" type="button">' + escapeHtml(opts.confirmLabel || 'Confirmer') + '</button>' +
+      '</div>');
+    $('#m-cancel').addEventListener('click', closeModal);
+    $('#m-ok').addEventListener('click', function () { closeModal(); opts.onConfirm(); });
+  }
+
+  /* ---------------- Pavé PIN ---------------- */
+  var pinState = null;
+  var PIN_KEYS = (function () {
+    var k = '', i;
+    for (i = 1; i <= 9; i++) k += '<button type="button" data-d="' + i + '">' + i + '</button>';
+    k += '<button type="button" class="fn" data-c="c">C</button>';
+    k += '<button type="button" data-d="0">0</button>';
+    k += '<button type="button" class="fn" data-c="b">\u232B</button>';
+    return k;
+  })();
+  function openPinPad(opts) {
+    pinState = { opts: opts, value: '', pass: 1, first: '' };
+    renderPinPad();
+    $('#pin-overlay').hidden = false;
+  }
+  function closePinPad() {
+    $('#pin-overlay').hidden = true;
+    $('#pin-card').innerHTML = '';
+    pinState = null;
+  }
+  function renderPinPad() {
+    if (!pinState) return;
+    var o = pinState.opts;
+    var sub = o.subtitle || '';
+    if (o.confirm && pinState.pass === 2) sub = 'Confirmez le code';
+    $('#pin-card').innerHTML =
+      '<p class="pin-title">' + escapeHtml(o.title || 'Code secret') + '</p>' +
+      '<p class="pin-sub">' + escapeHtml(sub) + '</p>' +
+      '<div class="pin-dots" id="pin-dots"></div>' +
+      '<div class="pin-grid">' + PIN_KEYS + '</div>' +
+      '<button class="pin-cancel" id="pin-cancel" type="button">Annuler</button>';
+    renderPinDots();
+    $$('#pin-card [data-d]').forEach(function (b) {
+      b.addEventListener('click', function () { pinPress(b.dataset.d); });
+    });
+    $$('#pin-card [data-c]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        if (b.dataset.c === 'c') { pinState.value = ''; renderPinDots(); }
+        else { pinState.value = pinState.value.slice(0, -1); renderPinDots(); }
+      });
+    });
+    $('#pin-cancel').addEventListener('click', function () {
+      var o2 = pinState ? pinState.opts : null;
+      closePinPad();
+      if (o2 && o2.onCancel) o2.onCancel();
+    });
+  }
+  function renderPinDots() {
+    var d = $('#pin-dots');
+    if (!d || !pinState) return;
+    var html = '', i;
+    for (i = 0; i < pinState.opts.length; i++) {
+      html += '<span class="pin-dot' + (i < pinState.value.length ? ' filled' : '') + '"></span>';
+    }
+    d.innerHTML = html;
+    d.classList.remove('err');
+  }
+  function pinPress(d) {
+    if (!pinState || pinState.value.length >= pinState.opts.length) return;
+    pinState.value += d;
+    renderPinDots();
+    if (pinState.value.length >= pinState.opts.length) setTimeout(pinSubmit, 150);
+  }
+  function pinFail(msg) {
+    var d = $('#pin-dots');
+    if (d) d.classList.add('err');
+    toast(msg, 'err');
+    setTimeout(function () {
+      if (!pinState) return;
+      if (pinState.opts.confirm && pinState.pass === 2) { pinState.pass = 1; pinState.first = ''; }
+      pinState.value = '';
+      renderPinPad();
+    }, 600);
+  }
+  function pinSubmit() {
+    if (!pinState) return;
+    var o = pinState.opts;
+    if (o.confirm && pinState.pass === 1) {
+      pinState.first = pinState.value;
+      pinState.value = '';
+      pinState.pass = 2;
+      renderPinPad();
+      return;
+    }
+    if (o.confirm && pinState.pass === 2 && pinState.value !== pinState.first) {
+      pinFail('Les codes ne correspondent pas');
+      return;
+    }
+    var res;
+    try { res = o.onSubmit(pinState.value); }
+    catch (e) { console.error(e); res = false; }
+    if (res === false) { pinFail(o.errMsg || 'Code incorrect'); return; }
+    closePinPad();
+  }
+  $('#pin-overlay').addEventListener('click', function (e) {
+    if (e.target === $('#pin-overlay')) closePinPad();
+  });
+
+  /* ---------------- Paramètres ---------------- */
+  function loadSettings() {
+    return DB.getSetting('settings', null).then(function (s) {
+      if (s && typeof s === 'object') {
+        if (typeof s.shopName === 'string' && s.shopName.trim()) {
+          state.settings.shopName = s.shopName.trim();
+        }
+        if (Array.isArray(s.cuts)) {
+          state.settings.cuts = s.cuts.filter(function (v) { return ALL_CUTS.indexOf(v) !== -1; });
+        }
+        if (s.printerWidth === 58 || s.printerWidth === 80) {
+          state.settings.printerWidth = s.printerWidth;
+        }
+      }
+      if (!state.settings.cuts.length) state.settings.cuts = DEFAULT_SETTINGS.cuts.slice();
+      state.settings.cuts.sort(function (a, b) { return b - a; });
+    });
+  }
+  function saveSettings() {
+    return DB.setSetting('settings', state.settings).catch(function (e) { console.warn(e); });
+  }
+
+  function licenseState() {
+    var now = Date.now(), lic = state.license;
+    if (lic) {
+      if (lic.expiresAt === null) {
+        return { ok: true, mode: 'licensed', perpetual: true, plan: lic.planName };
+      }
+      if (lic.expiresAt > now) {
+        return {
+          ok: true, mode: 'licensed', plan: lic.planName, expiresAt: lic.expiresAt,
+          daysLeft: Math.max(1, Math.ceil((lic.expiresAt - now) / 864e5))
+        };
+      }
+      return { ok: false, reason: 'expired', plan: lic.planName, expiresAt: lic.expiresAt };
+    }
+    var end = (state.trialStart || 0) + TRIAL_DAYS * 864e5;
+    if (now < end) {
+      return { ok: true, mode: 'trial', expiresAt: end, daysLeft: Math.max(1, Math.ceil((end - now) / 864e5)) };
+    }
+    return { ok: false, reason: state.trialStart ? 'expired' : 'none' };
+  }
+
+  function updateSubUI() {
+    var st = licenseState();
+    var el = $('#sub-status');
+    if (el) {
+      var badge, info;
+      if (st.mode === 'licensed' && st.perpetual) {
+        badge = '<span class="badge ok">Licence perpétuelle</span>';
+        info = '<b>' + escapeHtml(st.plan || 'Perpétuel') + '</b> · jamais expirée';
+      } else if (st.mode === 'licensed') {
+        badge = '<span class="badge ok">Abonnement actif</span>';
+        info = '<b>' + escapeHtml(st.plan || '') + '</b> · expire le ' + frDateTs(st.expiresAt) +
+               ' (dans ' + st.daysLeft + ' jour' + (st.daysLeft > 1 ? 's' : '') + ')';
+      } else if (st.mode === 'trial') {
+        badge = '<span class="badge warn">Essai gratuit</span>';
+        info = 'Expire le ' + frDateTs(st.expiresAt) +
+               ' (dans ' + st.daysLeft + ' jour' + (st.daysLeft > 1 ? 's' : '') + ')';
+      } else {
+        badge = '<span class="badge err">Expiré</span>';
+        info = 'Saisissez un code d\'activation pour réactiver la caisse. Vos données sont conservées.';
+      }
+      if (state.license && state.license.code) {
+        info += ' · Code ' + escapeHtml(state.license.code);
+      }
+      el.innerHTML = badge + '<p class="sub-info">' + info + '</p>';
+    }
+    var b = $('#exp-banner');
+    if (b) {
+      var warn = st.ok && st.daysLeft != null && st.daysLeft <= 5;
+      b.hidden = !warn;
+      if (warn) {
+        var lib = st.mode === 'trial' ? 'Essai gratuit' : 'Abonnement';
+        b.textContent = lib + ' : ' + st.daysLeft + ' jour' + (st.daysLeft > 1 ? 's' : '') +
+                        ' restant' + (st.daysLeft > 1 ? 's' : '') + ' — touchez pour saisir un code d\'activation';
+      }
+    }
+  }
+
+  /* ---------------- Saisie monétaire ---------------- */
+  function attachMoneyInput(el, cb) {
+    el.addEventListener('input', function () {
+      var old = el.value;
+      var digits = old.replace(/\D/g, '').slice(0, 9);
+      var caret = el.selectionStart == null ? old.length : el.selectionStart;
+      var before = old.slice(0, caret).replace(/\D/g, '').length;
+      var formatted = digits ? M.format(parseInt(digits, 10)) : '';
+      el.value = formatted;
+      var pos = formatted.length, seen = 0, i;
+      for (i = 0; i < formatted.length; i++) {
+        if (formatted[i] >= '0' && formatted[i] <= '9') {
+          seen++;
+          if (seen >= before) { pos = i + 1; break; }
+        }
+      }
+      if (before === 0) pos = 0;
+      try { el.setSelectionRange(pos, pos); } catch (e) {}
+      cb(digits ? parseInt(digits, 10) : 0);
+    });
+  }
+
+  /* ---------------- Navigation ---------------- */
+  var views = {
+    home: $('#view-home'), money: $('#view-money'), sale: $('#view-sale'),
+    history: $('#view-history'), settings: $('#view-settings')
+  };
+  function go(name) {
+    if (!state.session.role) { lockNow(); return; }
+    Object.keys(views).forEach(function (k) {
+      views[k].classList.toggle('active', k === name);
+    });
+    $$('.tabbar button').forEach(function (b) {
+      b.classList.toggle('active', b.dataset.nav === name);
+    });
+    window.scrollTo({ top: 0 });
+    if (name === 'history') renderHistory();
+    if (name === 'home') renderHomeStats();
+    if (name === 'settings') { buildCutsSettings(); renderTeam(); updateSubUI(); renderPrinterUI(); updateSyncUI(); }
+  }
+
+  /* ---------------- Écran de verrouillage ---------------- */
+  function showLock() {
+    $('#lockscreen').hidden = false;
+    document.body.style.overflow = 'hidden';
+  }
+  function hideLock() {
+    $('#lockscreen').hidden = true;
+    document.body.style.overflow = '';
+  }
+  function renderLock(mode, st, canBack) {
+    st = st || licenseState();
+    var body = $('#lock-body');
+    if (mode === 'activation') {
+      var msg;
+      if (state.license) msg = 'Abonnement expiré le ' + frDateTs(state.license.expiresAt);
+      else if (state.trialStart) msg = 'Essai gratuit de ' + TRIAL_DAYS + ' jours terminé';
+      else msg = 'Aucun abonnement actif';
+      body.innerHTML =
+        '<div class="lock-status err">' + escapeHtml(msg) + '</div>' +
+        '<div class="lock-form">' +
+          '<label class="lock-label" for="act-code">Code d\'activation</label>' +
+          '<input id="act-code" class="act-input" placeholder="CX-XXXX-XXXX" autocomplete="off" autocapitalize="characters">' +
+          '<button class="btn primary" id="act-go" type="button">Activer</button>' +
+          '<p class="hint">Code fourni par DigiSolia. Vos ventes et réglages sont conservés : ils réapparaîtront dès l\'activation.</p>' +
+          (canBack ? '<button class="btn ghost" id="act-back" type="button">Retour</button>' : '') +
+        '</div>';
+      function tryActivate() {
+        var raw = $('#act-code').value;
+        if (!raw.trim()) { toast('Saisissez votre code d\'activation', 'warn'); return; }
+        activateCode(raw, false);
+      }
+      $('#act-go').addEventListener('click', tryActivate);
+      $('#act-code').addEventListener('keydown', function (e) { if (e.key === 'Enter') tryActivate(); });
+      var back = $('#act-back');
+      if (back) back.addEventListener('click', function () { renderLock('login', licenseState(), true); });
+    } else {
+      var badge;
+      if (st.mode === 'licensed' && st.perpetual) {
+        badge = '<span class="badge ok">Licence perpétuelle</span>';
+      } else if (st.mode === 'licensed') {
+        badge = '<span class="badge ok">Abonnement actif — ' + st.daysLeft + ' j</span>';
+      } else {
+        badge = '<span class="badge warn">Essai gratuit — ' + st.daysLeft + ' j</span>';
+      }
+      body.innerHTML =
+        '<div class="lock-shop">' + escapeHtml(state.settings.shopName) + '</div>' +
+        '<div class="lock-badge">' + badge + '</div>' +
+        '<h2 class="lock-q">Qui est en caisse ?</h2>' +
+        '<div class="profile-list" id="profile-list"></div>' +
+        '<button class="btn ghost" id="pf-sub" type="button">Gérer l\'abonnement</button>';
+      var list = $('#profile-list');
+      var adminBtn = document.createElement('button');
+      adminBtn.className = 'profile-btn admin';
+      adminBtn.type = 'button';
+      adminBtn.innerHTML = icon('shield') +
+        '<span><b>Administrateur</b><small>' +
+        (state.adminPinHash ? 'Recettes, réglages et équipe — PIN requis' : 'Première utilisation : définir votre PIN') +
+        '</small></span>';
+      adminBtn.addEventListener('click', function () { openLoginPin('admin', null); });
+      list.appendChild(adminBtn);
+      state.cashiers.forEach(function (c) {
+        var btn = document.createElement('button');
+        btn.className = 'profile-btn';
+        btn.type = 'button';
+        btn.innerHTML = icon('user') +
+          '<span><b>' + escapeHtml(c.name) + '</b><small>Session caisse — PIN requis</small></span>';
+        btn.addEventListener('click', function () { openLoginPin('cashier', c); });
+        list.appendChild(btn);
+      });
+      $('#pf-sub').addEventListener('click', function () { renderLock('activation', licenseState(), true); });
+    }
+    showLock();
+  }
+  function lockNow(forceMode) {
+    state.session = { role: null, name: null };
+    document.body.dataset.role = '';
+    closeModal();
+    closePinPad();
+    var st = licenseState();
+    var mode = forceMode || (!st.ok ? 'activation' : 'login');
+    renderLock(mode, st, mode === 'login');
+  }
+
+  function openLoginPin(kind, cashier) {
+    if (kind === 'admin') {
+      if (!state.adminPinHash) {
+        askCreateAdminPin(function () {
+          startSession({ role: 'admin', name: 'Administrateur' });
+        });
+        return;
+      }
+      openPinPad({
+        title: 'Administrateur', subtitle: 'PIN administrateur', length: 4,
+        errMsg: 'PIN administrateur incorrect',
+        onSubmit: function (pin) {
+          if (S.hashPin(pin) !== state.adminPinHash) return false;
+          startSession({ role: 'admin', name: 'Administrateur' });
+          return true;
+        }
+      });
+      return;
+    }
+    openPinPad({
+      title: cashier.name, subtitle: 'PIN caissier', length: 4,
+      errMsg: 'PIN incorrect',
+      onSubmit: function (pin) {
+        if (S.hashPin(pin) !== cashier.pinHash) return false;
+        startSession({ role: 'cashier', name: cashier.name });
+        return true;
+      }
+    });
+  }
+  function askCreateAdminPin(done) {
+    openPinPad({
+      title: 'Créer le PIN administrateur', subtitle: '4 chiffres — à retenir', length: 4, confirm: true,
+      onSubmit: function (pin) {
+        state.adminPinHash = S.hashPin(pin);
+        DB.setSetting('adminPinHash', state.adminPinHash).catch(function () {});
+        toast('PIN administrateur enregistré');
+        done();
+        return true;
+      }
+    });
+  }
+
+  function startSession(s) {
+    state.session = { role: s.role, name: s.name };
+    document.body.dataset.role = s.role;
+    hideLock();
+    closeModal();
+    $('#header-shop').textContent = state.settings.shopName;
+    updateSubUI();
+    go(state.startView || 'home');
+    state.startView = '';
+    refreshData();
+    recomputeMoney();
+    toast('Bienvenue, ' + s.name);
+  }
+
+  /* ---------------- Triple appui (Super Admin caché) ----------------
+     Fenêtre de 1 s entre appuis, tolérante aux doigts maladroits. */
+  function bindTripleTap(el, fn) {
+    if (!el) return;
+    var count = 0, t = 0;
+    el.addEventListener('click', function () {
+      var now = Date.now();
+      if (now - t > 1000) count = 0;
+      t = now;
+      count++;
+      if (count >= 3) { count = 0; fn(); }
+    });
+  }
+  function openSuperPin() {
+    openPinPad({
+      title: 'Super Admin', subtitle: 'Accès DigiSolia', length: 6,
+      errMsg: 'Code Super Admin incorrect',
+      onSubmit: function (pin) {
+        if (S.hashPin(pin) !== (state.superPinHash || S.hashPin(DEFAULT_SUPER_PIN))) return false;
+        openSuperPanel();
+        return true;
+      }
+    });
+  }
+
+  /* ---------------- Panneau Super Admin ---------------- */
+  function renderSaRegistry() {
+    var el = $('#sa-reg');
+    if (!el) return;
+    if (!state.saasCodes.length) {
+      el.innerHTML = '<p class="hint">Aucun code émis depuis ce poste.</p>';
+      return;
+    }
+    el.innerHTML = state.saasCodes.map(function (r) {
+      return '<div class="sa-row"><b>' + escapeHtml(r.code) + '</b>' +
+        '<span>' + escapeHtml(S.PLANS[r.plan] ? S.PLANS[r.plan].name : '?') + '</span>' +
+        '<small>' + frDateTs(r.issuedAt) + '</small></div>';
+    }).join('');
+  }
+  async function renderSaShops() {
+    var el = $('#sa-shops');
+    if (!el) return;
+    el.innerHTML = '<p class="hint">Chargement des boutiques…</p>';
+    try {
+      var shops = await SY.listShops();
+      if (!shops.length) {
+        el.innerHTML = '<p class="hint">Aucune boutique synchronisée pour l\'instant. Les boutiques apparaissent ici dès qu\'elles activent la synchronisation.</p>';
+        return;
+      }
+      var today = todayISO();
+      el.innerHTML = shops.map(function (s) {
+        var ca = (s.todayDate === today)
+          ? 'Aujourd\'hui : ' + M.format(s.todayRevenue || 0) + ' F · ' + (s.todaySales || 0) + ' vente(s)'
+          : 'Aucune vente aujourd\'hui';
+        return '<div class="sa-row"><b>' + escapeHtml(s.name || 'Boutique') + '</b>' +
+          '<span>' + escapeHtml(ca) + '</span>' +
+          '<small>' + escapeHtml(s.device || '') + ' · ' + timeAgo(s.lastSeen) + '</small></div>';
+      }).join('');
+    } catch (e) {
+      el.innerHTML = '<p class="hint">Chargement impossible : ' + escapeHtml(SY.friendly(e)) + '</p>';
+    }
+  }
+  function saveLicense() {
+    return DB.setSetting('license', state.license).catch(function () {});
+  }
+  function openSuperPanel() {
+    var st = licenseState();
+    var lic = state.license;
+    var localHtml;
+    if (lic) {
+      var b = lic.expiresAt == null
+        ? '<span class="badge ok">Perpétuelle</span>'
+        : (lic.expiresAt > Date.now() ? '<span class="badge ok">Active</span>' : '<span class="badge err">Expirée</span>');
+      localHtml = b + '<p class="sub-info"><b>' + escapeHtml(lic.planName || '') + '</b> · Code ' +
+        escapeHtml(lic.code || '') + ' · ' +
+        (lic.expiresAt == null ? 'sans expiration' : 'expire le ' + frDateTs(lic.expiresAt)) + '</p>';
+    } else {
+      localHtml = '<p class="sub-info">Aucune licence — la boutique tourne sur l\'essai gratuit (' + st.daysLeft + ' j restants).</p>';
+    }
+    var opts = '';
+    S.PLANS.forEach(function (p, i) { opts += '<option value="' + i + '">' + escapeHtml(p.name) + '</option>'; });
+    openModal(
+      '<p class="m-eyebrow">DigiSolia · Accès Super Admin</p>' +
+      '<h3 class="m-title">Gestion des abonnements</h3>' +
+      '<div class="sa-sec"><h4>Licence de cette boutique</h4>' + localHtml +
+        '<div class="btn-row">' +
+          '<button class="btn small" id="sa-plus30" type="button">+1 mois</button>' +
+          '<button class="btn small" id="sa-plus365" type="button">+1 an</button>' +
+          '<button class="btn small danger-ghost" id="sa-revoke" type="button">Révoquer</button>' +
+        '</div></div>' +
+      '<div class="sa-sec"><h4>Générer un code d\'activation</h4>' +
+        '<select id="sa-plan">' + opts + '</select>' +
+        '<button class="btn primary" id="sa-gen" type="button">Générer un code</button>' +
+        '<div id="sa-out" hidden>' +
+          '<div class="gen-code" id="sa-code-val"></div>' +
+          '<p class="hint" id="sa-code-meta"></p>' +
+          '<button class="btn ghost small" id="sa-copy" type="button">Copier le code</button>' +
+        '</div></div>' +
+      '<div class="sa-sec"><h4>Codes émis (registre local)</h4><div id="sa-reg"></div></div>' +
+      '<div class="sa-sec"><h4>Boutiques à distance (suivi Firebase)</h4>' +
+        '<div id="sa-shops"><p class="hint">…</p></div>' +
+        '<div class="btn-row"><button class="btn small" id="sa-shops-refresh" type="button">Actualiser</button></div>' +
+        '<p class="hint">Recettes du jour et activité, vues à distance. Nécessite Internet ; hors ligne, cette liste reste vide.</p></div>' +
+      '<div class="sa-sec"><h4>Sécurité</h4>' +
+        '<div class="btn-row col">' +
+          '<button class="btn small" id="sa-reset-admin" type="button">Réinitialiser le PIN administrateur de cette boutique</button>' +
+          '<button class="btn small" id="sa-chg-super" type="button">Changer le PIN Super Admin</button>' +
+        '</div></div>' +
+      '<div class="m-actions"><button class="btn primary" id="m-close" type="button">Fermer</button></div>');
+
+    renderSaRegistry();
+    renderSaShops();
+    $('#m-close').addEventListener('click', closeModal);
+    $('#sa-shops-refresh').addEventListener('click', renderSaShops);
+
+    function extend(days) {
+      var now = Date.now();
+      var base = (state.license && state.license.expiresAt && state.license.expiresAt > now)
+        ? state.license.expiresAt : now;
+      if (!state.license) {
+        state.license = { code: 'MANUEL', plan: -1, planName: 'Prolongation manuelle', activatedAt: now };
+      }
+      state.license.expiresAt = base + days * 864e5;
+      saveLicense().then(function () {
+        updateSubUI();
+        openSuperPanel();
+        toast('Licence prolongée');
+      });
+    }
+    $('#sa-plus30').addEventListener('click', function () { extend(30); });
+    $('#sa-plus365').addEventListener('click', function () { extend(365); });
+    $('#sa-revoke').addEventListener('click', function () {
+      state.license = null;
+      saveLicense().then(function () {
+        updateSubUI();
+        closeModal();
+        toast('Licence révoquée', 'warn');
+        if (!licenseState().ok) lockNow('activation');
+        else openSuperPanel();
+      });
+    });
+    $('#sa-gen').addEventListener('click', function () {
+      var p = parseInt($('#sa-plan').value, 10);
+      var code = S.make(p);
+      state.lastGenerated = code;
+      state.saasCodes.unshift({ code: code, plan: p, issuedAt: Date.now() });
+      if (state.saasCodes.length > 100) state.saasCodes.length = 100;
+      DB.setSetting('saasCodes', state.saasCodes).catch(function () {});
+      $('#sa-out').hidden = false;
+      $('#sa-code-val').textContent = code;
+      $('#sa-code-meta').textContent = S.PLANS[p].name +
+        ' · à communiquer au commerçant pour l\'activation';
+      renderSaRegistry();
+    });
+    $('#sa-copy').addEventListener('click', function () { copyText(state.lastGenerated); });
+    $('#sa-reset-admin').addEventListener('click', function () {
+      confirmDialog({
+        title: 'Réinitialiser le PIN administrateur ?',
+        message: 'L\'administrateur devra créer un nouveau PIN à sa prochaine connexion.',
+        confirmLabel: 'Réinitialiser',
+        onConfirm: function () {
+          state.adminPinHash = null;
+          DB.setSetting('adminPinHash', null).catch(function () {});
+          toast('PIN administrateur réinitialisé');
+        }
+      });
+    });
+    $('#sa-chg-super').addEventListener('click', function () {
+      closeModal();
+      openPinPad({
+        title: 'Nouveau PIN Super Admin', subtitle: '6 chiffres', length: 6, confirm: true,
+        onSubmit: function (pin) {
+          state.superPinHash = S.hashPin(pin);
+          DB.setSetting('superPinHash', state.superPinHash).catch(function () {});
+          toast('PIN Super Admin modifié');
+          return true;
+        }
+      });
+    });
+  }
+
+  /* ---------------- Activation par code ---------------- */
+  function activateCode(raw, fromSession) {
+    var info = S.decode(raw);
+    if (!info) {
+      toast('Code d\'activation invalide. Vérifiez la saisie.', 'err');
+      return false;
+    }
+    var plan = S.PLANS[info.plan];
+    var now = Date.now();
+    var base = (state.license && state.license.expiresAt && state.license.expiresAt > now)
+      ? state.license.expiresAt : now;
+    var expiresAt = plan.days === 0 ? null : base + plan.days * 864e5;
+    state.license = {
+      code: S.normalize(raw), plan: info.plan, planName: plan.name,
+      activatedAt: now, expiresAt: expiresAt
+    };
+    saveLicense();
+    hooks.emit('license:activated', state.license);
+    toast('Abonnement activé : ' + plan.name);
+    updateSubUI();
+    function after() {
+      if (fromSession) updateSubUI();
+      else startSession({ role: 'admin', name: 'Administrateur' });
+    }
+    if (!state.adminPinHash) askCreateAdminPin(after);
+    else after();
+    return true;
+  }
+  function openEnterCodeModal() {
+    openModal(
+      '<h3 class="m-title">Code d\'activation</h3>' +
+      '<p class="m-text">Saisissez le code fourni par DigiSolia pour activer ou prolonger l\'abonnement. La durée restante est cumulée.</p>' +
+      '<div class="field" style="margin-top:12px">' +
+        '<input id="mc-code" class="act-input" placeholder="CX-XXXX-XXXX" autocomplete="off" autocapitalize="characters">' +
+      '</div>' +
+      '<div class="m-actions">' +
+        '<button class="btn ghost" id="mc-cancel" type="button">Annuler</button>' +
+        '<button class="btn primary" id="mc-go" type="button">Activer</button>' +
+      '</div>');
+    $('#mc-cancel').addEventListener('click', closeModal);
+    $('#mc-go').addEventListener('click', function () {
+      var raw = $('#mc-code').value;
+      if (!raw.trim()) { toast('Saisissez un code', 'warn'); return; }
+      if (activateCode(raw, true)) closeModal();
+    });
+    $('#mc-code').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') $('#mc-go').click();
+    });
+  }
+
+  /* ---------------- Copie presse-papiers ---------------- */
+  function copyText(t) {
+    if (!t) { toast('Rien à copier', 'warn'); return; }
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = t;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); toast('Copié'); }
+      catch (e) { toast('Copie impossible', 'err'); }
+      ta.remove();
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).then(function () { toast('Copié'); }, fallback);
+    } else fallback();
+  }
+
+  /* ============ SYNCHRONISATION (côté contrôleur) ============ */
+  async function prepareForSync() {
+    var all = await DB.getAllSales();
+    var now = Date.now();
+    for (var i = 0; i < all.length; i++) {
+      var s = all[i], ch = false;
+      if (!s.uid) { s.uid = uuid(); ch = true; }
+      if (!s.updatedAt) { s.updatedAt = s.createdAt || now; ch = true; }
+      if (!s.dirty) { s.dirty = true; ch = true; }
+      if (ch) await DB.putSale(s);
+    }
+  }
+  async function upsertRemote(r) {
+    if (!r || !r.uid) return false;
+    var all = await DB.getAllSales();
+    var local = null;
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].uid === r.uid) { local = all[i]; break; }
+    }
+    var ru = M.toNumber(r.updatedAt) || M.toNumber(r.createdAt) || 0;
+    delete r.shopId; delete r.syncedAt;
+    if (local) {
+      var lu = M.toNumber(local.updatedAt) || M.toNumber(local.createdAt) || 0;
+      if (lu >= ru) return false;
+      r.id = local.id;
+    } else {
+      r.id = 'r-' + r.uid;
+    }
+    r.dirty = false;
+    await DB.putSale(r);
+    return true;
+  }
+  async function markPushed(uids) {
+    var set = {};
+    uids.forEach(function (u) { set[u] = 1; });
+    var all = await DB.getAllSales();
+    for (var i = 0; i < all.length; i++) {
+      var s = all[i];
+      if (s.uid && set[s.uid] && s.dirty) {
+        s.dirty = false;
+        await DB.putSale(s);
+      }
+    }
+  }
+  async function purgeTombstones() {
+    var all = await DB.getAllSales();
+    for (var i = 0; i < all.length; i++) {
+      var s = all[i];
+      if (s.deleted && !s.dirty) await DB.deleteSale(s.id);
+    }
+  }
+  function buildSummary() {
+    return DB.getAllSales().then(function (all) {
+      var list = live(all);
+      var today = todayISO();
+      var day = list.filter(function (s) { return s.date === today; });
+      return {
+        name: state.settings.shopName,
+        todayDate: today,
+        todaySales: day.length,
+        todayRevenue: day.reduce(function (a, s) { return a + (s.total || 0); }, 0),
+        totalSales: list.length,
+        totalRevenue: list.reduce(function (a, s) { return a + (s.total || 0); }, 0),
+        lastSaleAt: list.reduce(function (m, s) { return Math.max(m, s.createdAt || 0); }, 0),
+        cashierCount: state.cashiers.length
+      };
+    });
+  }
+  SY.attach({
+    isEnabled: function () { return state.syncEnabled; },
+    getSetting: function (k, d) { return DB.getSetting(k, d); },
+    setSetting: function (k, v) { return DB.setSetting(k, v); },
+    getAllSales: function () { return DB.getAllSales(); },
+    upsertSale: upsertRemote,
+    markPushed: markPushed,
+    purgeTombstones: purgeTombstones,
+    buildSummary: buildSummary,
+    onDataChanged: function () { refreshData(); },
+    toastSync: function (pushed, pulled) {
+      if (pushed || pulled) toast('Synchronisé — ' + pushed + ' envoyée(s), ' + pulled + ' reçue(s)');
+    },
+    toastErr: function (msg) { toast('Synchro : ' + msg, 'err'); },
+    onSyncState: function () { updateSyncUI(); }
+  });
+
+  function updateSyncUI() {
+    var el = $('#sync-status'), det = $('#sync-detail'), btn = $('#btn-sync-toggle');
+    if (!el || !det || !btn) return;
+    var st = SY.status();
+    if (!state.syncEnabled) {
+      el.textContent = 'Synchronisation désactivée — tout reste sur cet appareil';
+      det.textContent = 'Activez pour relier plusieurs appareils de la boutique et permettre le suivi des recettes à distance par DigiSolia.';
+      btn.textContent = 'Activer la synchronisation';
+      return;
+    }
+    btn.textContent = 'Désactiver';
+    var tail = ' · ID boutique ' + (state.shopId || '—').slice(0, 8) + '…';
+    switch (st.status) {
+      case 'ok':
+        el.textContent = 'Synchronisation active — à jour';
+        det.textContent = 'Dernière synchro : ' + timeAgo(st.lastSyncAt) + tail;
+        break;
+      case 'syncing':
+        el.textContent = 'Synchronisation en cours…';
+        det.textContent = 'Envoi et réception des ventes.' + tail;
+        break;
+      case 'connecting':
+        el.textContent = 'Connexion au cloud…';
+        det.textContent = 'Première connexion ou reprise.' + tail;
+        break;
+      case 'offline':
+        el.textContent = 'Hors ligne — en attente d\'Internet';
+        det.textContent = 'Les ventes s\'enregistrent localement et partiront automatiquement.' + tail;
+        break;
+      case 'error':
+        el.textContent = 'Erreur de synchronisation';
+        det.textContent = st.lastError + '. Nouvelle tentative automatique.' + tail;
+        break;
+      default:
+        el.textContent = 'Synchronisation activée';
+        det.textContent = 'En attente de la première synchronisation.' + tail;
+    }
+  }
+
+  async function enableSync() {
+    try {
+      if (!state.shopId) {
+        state.shopId = uuid();
+        await DB.setSetting('shopId', state.shopId);
+      }
+      await prepareForSync();
+      state.syncEnabled = true;
+      await DB.setSetting('syncEnabled', true);
+      updateSyncUI();
+      toast('Connexion au cloud…');
+      var r = await SY.syncNow(true);
+      updateSyncUI();
+      if (r.ok) toast('Synchronisation activée — ID boutique copiable dans Paramètres');
+    } catch (e) {
+      console.error(e);
+      toast('Activation impossible : ' + (e.message || 'erreur'), 'err');
+    }
+  }
+  function toggleSync() {
+    if (state.syncEnabled) {
+      confirmDialog({
+        title: 'Désactiver la synchronisation ?',
+        message: 'Les ventes resteront sur cet appareil et ne seront plus envoyées. Le cloud conserve l\'historique déjà envoyé.',
+        confirmLabel: 'Désactiver',
+        onConfirm: async function () {
+          state.syncEnabled = false;
+          await DB.setSetting('syncEnabled', false);
+          updateSyncUI();
+          toast('Synchronisation désactivée');
+        }
+      });
+    } else {
+      enableSync();
+    }
+  }
+  function joinShopModal() {
+    openModal(
+      '<h3 class="m-title">Relier un appareil</h3>' +
+      '<p class="m-text">Sur l\'appareil principal : Paramètres → Synchronisation cloud → « Copier l\'ID boutique ». Collez cet identifiant ici pour retrouver les ventes de la même boutique.</p>' +
+      '<div class="field" style="margin-top:12px">' +
+        '<input id="join-id" class="act-input" placeholder="xxxxxxxx-xxxx-xxxx-…" autocomplete="off">' +
+      '</div>' +
+      '<div class="m-actions">' +
+        '<button class="btn ghost" id="j-cancel" type="button">Annuler</button>' +
+        '<button class="btn primary" id="j-go" type="button">Relier</button>' +
+      '</div>');
+    $('#j-cancel').addEventListener('click', closeModal);
+    $('#j-go').addEventListener('click', async function () {
+      var raw = $('#join-id').value || '';
+      var hex = raw.toLowerCase().replace(/[^0-9a-f]/g, '');
+      if (hex.length !== 32) { toast('ID boutique invalide', 'err'); return; }
+      var id = hex.slice(0, 8) + '-' + hex.slice(8, 12) + '-' + hex.slice(12, 16) +
+               '-' + hex.slice(16, 20) + '-' + hex.slice(20);
+      $('#j-go').disabled = true;
+      try {
+        var ok = await SY.checkShop(id);
+        if (!ok) { toast('Boutique introuvable — vérifiez l\'ID', 'err'); $('#j-go').disabled = false; return; }
+        state.shopId = id;
+        await DB.setSetting('shopId', id);
+        await prepareForSync();
+        state.syncEnabled = true;
+        await DB.setSetting('syncEnabled', true);
+        closeModal();
+        updateSyncUI();
+        toast('Boutique reliée — synchronisation en cours…');
+        await SY.syncNow(false);
+      } catch (e) {
+        toast('Reliage impossible : ' + SY.friendly(e), 'err');
+        $('#j-go').disabled = false;
+      }
+    });
+  }
+
+  /* ---------------- Suppression (avec propagation) ---------------- */
+  async function removeSale(s) {
+    try {
+      if (state.syncEnabled) {
+        var now = Date.now();
+        s.deleted = true;
+        s.deletedAt = now;
+        s.updatedAt = now;
+        s.dirty = true;
+        await DB.putSale(s);
+        SY.schedule();
+      } else {
+        await DB.deleteSale(s.id);
+      }
+      hooks.emit('sale:deleted', s);
+      refreshData();
+      toast('Vente supprimée');
+    } catch (e) {
+      console.error(e);
+      toast('Suppression impossible', 'err');
+    }
+  }
+
+  /* ---------------- Tickets ESC/POS ---------------- */
+  var CP850 = {
+    'à':0x85,'â':0x83,'ä':0x84,'å':0x86,'è':0x8A,'é':0x82,'ê':0x88,'ë':0x89,'ì':0x8D,
+    'î':0x8C,'ï':0x8B,'ò':0x95,'ô':0x93,'ö':0x94,'ù':0x97,'û':0x96,'ü':0x81,'ç':0x87,
+    'ñ':0xA4,'á':0xA0,'í':0xA1,'ó':0xA2,'ú':0xA3,'À':0xB7,'Â':0xB6,'Á':0xB5,'È':0xD4,
+    'É':0x90,'Ê':0xD2,'Ë':0xD3,'Î':0xD6,'Ï':0xD7,'Ô':0xE0,'Ö':0x99,'Ù':0xEB,'Û':0xEC,
+    'Ü':0x9A,'Ç':0x80,'Ñ':0xA5,'°':0xF8
+  };
+  function buildTicketBytes(sale) {
+    var width = state.settings.printerWidth === 58 ? 32 : 48;
+    var B = [];
+    function push() { for (var i = 0; i < arguments.length; i++) B.push(arguments[i] & 0xFF); }
+    function nl() { B.push(10); }
+    function txt(s) {
+      s = String(s == null ? '' : s)
+        .replace(/œ/g, 'oe').replace(/Œ/g, 'OE')
+        .replace(/…/g, '...').replace(/[’‘]/g, "'")
+        .replace(/[–—]/g, '-').replace(/€/g, 'F')
+        .replace(/[\u00A0\u202F]/g, ' ');
+      for (var i = 0; i < s.length; i++) {
+        var ch = s[i], c = ch.charCodeAt(0);
+        if (c < 128) { B.push(c); continue; }
+        if (CP850[ch] != null) { B.push(CP850[ch]); continue; }
+        var d = ch.normalize('NFD').charCodeAt(0);
+        B.push(d < 128 ? d : 63);
+      }
+    }
+    function line(ch) { for (var i = 0; i < width; i++) B.push(ch.charCodeAt(0)); nl(); }
+    function align(n) { push(0x1B, 0x61, n); }
+    function bold(on) { push(0x1B, 0x45, on ? 1 : 0); }
+    function size(on) { push(0x1D, 0x21, on ? 0x11 : 0x00); }
+    function row(l, r) {
+      l = String(l == null ? '' : l);
+      r = String(r == null ? '' : r);
+      if (r.length > width) r = r.slice(0, width);
+      var sp = width - r.length;
+      if (l.length > sp) { txt(l); nl(); l = ''; }
+      while (l.length < sp) l += ' ';
+      txt(l); txt(r); nl();
+    }
+
+    push(0x1B, 0x40);
+    push(0x1B, 0x74, 2);
+
+    align(1); size(1); bold(1);
+    txt(String(state.settings.shopName || 'Boutique').slice(0, Math.floor(width / 2)));
+    nl();
+    size(0); bold(0);
+    txt('Ticket ' + (sale.number || '')); nl();
+    txt(frDate(sale.date) + '  ' + (sale.time || '')); nl();
+    if (sale.cashier) { txt('Caisse : ' + sale.cashier); nl(); }
+    nl();
+
+    align(0);
+    line('-');
+    (sale.items || []).forEach(function (it) {
+      var nm = String(it.name || 'Article');
+      if (nm.length > width) nm = nm.slice(0, width);
+      txt(nm); nl();
+      row('  ' + fmtQty(it.qty) + ' x ' + M.format(it.price) + ' F', M.format(it.subtotal) + ' F');
+    });
+    line('-');
+    bold(1); row('TOTAL', M.format(sale.total) + ' F CFA'); bold(0);
+    row('Reçu', M.format(sale.received) + ' F');
+    row('Monnaie', M.toNumber(sale.change) > 0 ? M.format(sale.change) + ' F' : '0 F (compte exact)');
+    line('=');
+
+    align(1);
+    txt('Merci de votre visite !'); nl();
+    nl();
+    txt('Caisse Express · DigiSolia'); nl();
+    align(0);
+
+    push(0x1B, 0x64, 4);
+    push(0x1D, 0x56, 0);
+    return new Uint8Array(B);
+  }
+
+  function renderPrinterUI() {
+    var el = $('#prt-status'), btn = $('#prt-connect');
+    if (!el || !btn) return;
+    if (!P.supported()) {
+      el.textContent = 'Bluetooth non pris en charge par ce navigateur';
+      btn.textContent = 'Connecter l\'imprimante';
+      return;
+    }
+    if (P.connected()) {
+      el.textContent = 'Connectée : ' + P.name();
+      btn.textContent = 'Déconnecter';
+    } else if (P.name()) {
+      el.textContent = P.name() + ' — déconnectée';
+      btn.textContent = 'Reconnecter';
+    } else {
+      el.textContent = 'Aucune imprimante appairée sur cette session';
+      btn.textContent = 'Connecter l\'imprimante';
+    }
+  }
+  function btErrMsg(e) {
+    var n = (e && e.name) || '';
+    var m = (e && e.message) || '';
+    if (n === 'NotFoundError' || n === 'AbortError') return 'aucune imprimante sélectionnée';
+    if (m.indexOf('NO-WRITER') !== -1) return 'imprimante détectée, mais voie d\'écriture introuvable — essayez son mode BLE';
+    if (n === 'NetworkError' || m.indexOf('connect') !== -1) return 'imprimante injoignable — vérifiez qu\'elle est allumée, chargée et proche';
+    return m ? String(m).slice(0, 90) : 'erreur inconnue';
+  }
+  function explainPrintModal() {
+    openModal(
+      '<h3 class="m-title">Impression Bluetooth indisponible</h3>' +
+      '<p class="m-text">Ce navigateur ne prend pas en charge le Bluetooth. Ouvrez Caisse Express dans <b>Chrome</b> (Android, Windows ou macOS), de préférence en https:// ou http://localhost. Les ventes et l\'historique continuent de fonctionner normalement.</p>' +
+      '<div class="m-actions"><button class="btn primary" id="m-close" type="button">Compris</button></div>');
+    $('#m-close').addEventListener('click', closeModal);
+  }
+  function pairPrinterModal() {
+    return new Promise(function (resolve) {
+      openModal(
+        '<h3 class="m-title">Imprimante thermique</h3>' +
+        '<p class="m-text">Allumez l\'imprimante et activez son Bluetooth, puis appuyez sur « Choisir » et sélectionnez-la dans la liste du navigateur. Noms fréquents : <b>POS-80, POS-58, MTP-II, GB-88, Bluetooth Printer…</b></p>' +
+        '<div class="m-actions">' +
+          '<button class="btn ghost" id="pp-later" type="button">Plus tard</button>' +
+          '<button class="btn primary" id="pp-pick" type="button">Choisir…</button>' +
+        '</div>');
+      $('#pp-later').addEventListener('click', function () { closeModal(); resolve(false); });
+      $('#pp-pick').addEventListener('click', async function () {
+        var b = $('#pp-pick');
+        b.disabled = true;
+        b.textContent = 'Recherche…';
+        try {
+          var nm = await P.pick();
+          toast('Imprimante connectée : ' + nm);
+          renderPrinterUI();
+          closeModal();
+          resolve(true);
+        } catch (e) {
+          closeModal();
+          if (!(e && (e.name === 'NotFoundError' || e.name === 'AbortError'))) {
+            toast('Connexion impossible : ' + btErrMsg(e), 'err');
+          }
+          resolve(false);
+        }
+      });
+    });
+  }
+  async function printFlow(sale) {
+    if (!P.supported()) { explainPrintModal(); return false; }
+    if (!P.connected()) {
+      var paired = await pairPrinterModal();
+      if (!paired) return false;
+    }
+    try {
+      toast('Impression en cours…');
+      await P.send(buildTicketBytes(sale));
+      hooks.emit('sale:printed', sale);
+      toast('Ticket imprimé');
+      renderPrinterUI();
+      return true;
+    } catch (e) {
+      console.error(e);
+      toast('Impression impossible : ' + btErrMsg(e), 'err');
+      renderPrinterUI();
+      return false;
+    }
+  }
+  function testPrint() {
+    if (!P.supported()) { explainPrintModal(); return; }
+    var t = new Date();
+    printFlow({
+      number: 'TEST',
+      date: todayISO(t),
+      time: pad2(t.getHours()) + ':' + pad2(t.getMinutes()),
+      cashier: 'Test',
+      items: [
+        { name: 'Riz parfumé 5 kg', qty: 2, price: 750, subtotal: 1500 },
+        { name: 'Huile végétale 1 L', qty: 1, price: 1500, subtotal: 1500 },
+        { name: 'Thé vert', qty: 3, price: 250, subtotal: 750 }
+      ],
+      total: 3750, received: 5000, change: 1250
+    });
+  }
+
+  /* ---------------- Résultat + décomposition ---------------- */
+  function setResult(el, o) {
+    el.className = 'result ' + o.cls;
+    el.querySelector('.result-label').textContent = o.label;
+    el.querySelector('.result-value b').textContent = o.value;
+    el.querySelector('.result-note').textContent = o.note || '';
+  }
+  function renderBreakdown(container, amount) {
+    if (!container) return;
+    var r = M.breakdown(amount, state.settings.cuts);
+    if (amount <= 0 || !r.pieces.length) { container.innerHTML = ''; return; }
+    container.innerHTML = r.pieces.map(function (p, i) {
+      var ico = p.value < 1000 ? icon('coin') : icon('bill');
+      return '<span class="chip" style="animation-delay:' + (i * 40) + 'ms">' +
+        '<span class="chip-ico">' + ico + '</span>' +
+        '<b>' + p.count + ' ×</b>' +
+        '<span class="chip-cut">' + M.format(p.value) + ' F</span></span>';
+    }).join('') + (r.remainder > 0
+      ? '<p class="bd-remainder">Reste non décomposable avec vos coupures : <b>' +
+        M.format(r.remainder) + ' F</b>. Vérifiez les coupures dans Paramètres.</p>'
+      : '');
+  }
+
+  /* ---------------- Calculer la monnaie ---------------- */
+  function recomputeMoney() {
+    var pay = state.calc.pay, recv = state.calc.recv;
+    var res = $('#money-result'), bd = $('#money-breakdown');
+    if (!pay && !recv) {
+      setResult(res, { cls: 'st-empty', label: 'MONNAIE À RENDRE', value: '—', note: 'Saisissez les montants ci-dessus' });
+      bd.innerHTML = ''; return;
+    }
+    if (recv < pay) {
+      setResult(res, { cls: 'st-short', label: 'MONTANT INSUFFISANT', value: M.format(pay - recv), note: 'Il manque encore cette somme au client' });
+      bd.innerHTML = ''; return;
+    }
+    if (recv === pay) {
+      setResult(res, { cls: 'st-exact', label: 'COMPTE EXACT', value: '0', note: 'Aucune monnaie à rendre' });
+      bd.innerHTML = ''; return;
+    }
+    var change = recv - pay;
+    setResult(res, { cls: 'st-ok', label: 'MONNAIE À RENDRE', value: M.format(change), note: '' });
+    renderBreakdown(bd, change);
+  }
+
+  /* ---------------- Nouvelle vente ---------------- */
+  function addSaleLine(data, focus) {
+    state.sale.items.push(Object.assign({ id: nextId(), name: '', qty: '1', price: '' }, data || {}));
+    renderSaleLines();
+    if (focus) {
+      var lines = $$('.sale-line .sl-name');
+      if (lines.length) lines[lines.length - 1].focus();
+    }
+    recomputeSale();
+  }
+  function lineTotal(it) {
+    var qty = M.parseQty(it.qty), price = M.toNumber(it.price);
+    if (qty <= 0 || price <= 0) return 0;
+    return M.clampAmount(qty * price);
+  }
+  function saleTotal() {
+    return state.sale.items.reduce(function (s, it) { return s + lineTotal(it); }, 0);
+  }
+  function renderSaleLines() {
+    var wrap = $('#sale-items');
+    wrap.innerHTML = '';
+    state.sale.items.forEach(function (it) {
+      var line = document.createElement('div');
+      line.className = 'sale-line';
+      line.innerHTML =
+        '<div class="sl-row1">' +
+          '<input class="sl-name" list="article-names" placeholder="Article (riz, huile…)" maxlength="40" value="' + escapeHtml(it.name) + '">' +
+          '<div class="sl-sub"><span>' + M.format(lineTotal(it)) + ' F</span>' +
+          '<button class="sl-del" type="button" aria-label="Supprimer l\'article">' + icon('trash') + '</button></div>' +
+        '</div>' +
+        '<div class="sl-row2">' +
+          '<label>Qté<input class="sl-qty" inputmode="decimal" maxlength="7" value="' + escapeHtml(it.qty) + '"></label>' +
+          '<span class="sl-x">×</span>' +
+          '<label>Prix unitaire<input class="sl-price" inputmode="numeric" maxlength="9" value="' + escapeHtml(it.price) + '"></label>' +
+        '</div>';
+      line.querySelector('.sl-name').addEventListener('input', function (e) { it.name = e.target.value; });
+      line.querySelector('.sl-qty').addEventListener('input', function (e) {
+        it.qty = e.target.value.replace(/[^\d.,]/g, '');
+        if (e.target.value !== it.qty) e.target.value = it.qty;
+        updateLine(line, it);
+      });
+      line.querySelector('.sl-price').addEventListener('input', function (e) {
+        it.price = e.target.value.replace(/\D/g, '').slice(0, 9);
+        if (e.target.value !== it.price) e.target.value = it.price;
+        updateLine(line, it);
+      });
+      line.querySelector('.sl-del').addEventListener('click', function () {
+        state.sale.items = state.sale.items.filter(function (x) { return x !== it; });
+        if (!state.sale.items.length) addSaleLine(); else renderSaleLines();
+        recomputeSale();
+      });
+      wrap.appendChild(line);
+    });
+  }
+  function updateLine(line, it) {
+    line.querySelector('.sl-sub span').textContent = M.format(lineTotal(it)) + ' F';
+    recomputeSale();
+  }
+  function recomputeSale() {
+    var total = saleTotal();
+    state.sale.total = total;
+    $('#sale-total').textContent = M.format(total);
+    $('#btn-validate').disabled = total <= 0;
+    $('#btn-validate-print').disabled = total <= 0;
+
+    var recv = state.sale.received;
+    var res = $('#sale-result'), bd = $('#sale-breakdown');
+    if (total <= 0) {
+      setResult(res, { cls: 'st-empty', label: 'MONNAIE À RENDRE', value: '—', note: 'Ajoutez des articles' });
+      bd.innerHTML = ''; return;
+    }
+    if (!recv) {
+      setResult(res, { cls: 'st-empty', label: 'MONNAIE À RENDRE', value: '—', note: 'Montant reçu non saisi — la validation supposera un compte exact' });
+      bd.innerHTML = ''; return;
+    }
+    if (recv < total) {
+      setResult(res, { cls: 'st-short', label: 'MONTANT INSUFFISANT', value: M.format(total - recv), note: 'Il manque encore cette somme au client' });
+      bd.innerHTML = ''; return;
+    }
+    if (recv === total) {
+      setResult(res, { cls: 'st-exact', label: 'COMPTE EXACT', value: '0', note: 'Aucune monnaie à rendre' });
+      bd.innerHTML = ''; return;
+    }
+    setResult(res, { cls: 'st-ok', label: 'MONNAIE À RENDRE', value: M.format(recv - total), note: '' });
+    renderBreakdown(bd, recv - total);
+  }
+  function resetSaleDraft() {
+    state.sale.items = [];
+    state.sale.received = 0;
+    state.sale.total = 0;
+    $('#sale-received').value = '';
+    addSaleLine();
+    recomputeSale();
+  }
+  async function validateSale(wantPrint) {
+    var items = state.sale.items
+      .map(function (it) {
+        return {
+          name: (it.name || '').trim() || 'Article',
+          qty: M.parseQty(it.qty),
+          price: M.toNumber(it.price),
+          subtotal: lineTotal(it)
+        };
+      })
+      .filter(function (it) { return it.qty > 0 && it.price > 0 && it.subtotal > 0; });
+    var total = items.reduce(function (s, it) { return s + it.subtotal; }, 0);
+    if (!items.length || total <= 0) {
+      toast('Ajoutez au moins un article avec quantité et prix', 'warn'); return;
+    }
+    var received = state.sale.received > 0 ? state.sale.received : total;
+    if (received < total) { toast('Montant reçu insuffisant', 'warn'); return; }
+    var change = received - total;
+    try {
+      var counter = (await DB.getSetting('saleCounter', 0)) + 1;
+      var now = new Date();
+      var sale = {
+        number: 'V-' + pad4(counter),
+        date: todayISO(now),
+        time: pad2(now.getHours()) + ':' + pad2(now.getMinutes()),
+        items: items,
+        total: M.clampAmount(total),
+        received: M.clampAmount(received),
+        change: M.clampAmount(change),
+        cashier: state.session.name || '',
+        uid: uuid(),
+        updatedAt: now.getTime(),
+        dirty: true,
+        createdAt: now.getTime()
+      };
+      await DB.addSale(sale);
+      await DB.setSetting('saleCounter', counter);
+      hooks.emit('sale:validated', sale);
+      if (state.syncEnabled) SY.schedule();
+      closeModal();
+      resetSaleDraft();
+
+      var printed = wantPrint ? await printFlow(sale) : false;
+      showSaleSuccess(sale, printed);
+      refreshData();
+      toast('Vente ' + sale.number + ' enregistrée');
+    } catch (e) {
+      console.error(e);
+      toast("Impossible d'enregistrer la vente", 'err');
+    }
+  }
+  function showSaleSuccess(sale, printed) {
+    var inner;
+    if (M.toNumber(sale.change) > 0) {
+      inner = '<div class="result st-ok"><span class="result-label">MONNAIE À RENDRE</span>' +
+        '<span class="result-value"><b>' + M.format(sale.change) + '</b><i>F CFA</i></span>' +
+        '<span class="result-note">' + (printed ? 'Ticket envoyé à l\'imprimante' : '') + '</span></div>' +
+        '<div class="breakdown" id="m-bd"></div>';
+    } else {
+      inner = '<div class="result st-exact"><span class="result-label">COMPTE EXACT</span>' +
+        '<span class="result-value"><b>0</b><i>F CFA</i></span>' +
+        '<span class="result-note">' + (printed ? 'Ticket envoyé à l\'imprimante' : 'Aucune monnaie à rendre') + '</span></div>';
+    }
+    openModal(
+      '<p class="m-eyebrow">Vente enregistrée</p>' +
+      '<h3 class="m-title">' + escapeHtml(sale.number) + ' · ' + M.format(sale.total) + ' F</h3>' +
+      inner +
+      '<button class="btn print wide" id="m-print" type="button">' + icon('print') + ' ' +
+        (printed ? 'Réimprimer le ticket' : 'Imprimer le ticket') + '</button>' +
+      '<div class="m-actions">' +
+        '<button class="btn primary" id="m-new" type="button">Nouvelle vente</button>' +
+        '<button class="btn ghost" id="m-close" type="button">Fermer</button>' +
+      '</div>');
+    if (M.toNumber(sale.change) > 0) renderBreakdown($('#m-bd'), sale.change);
+    $('#m-new').addEventListener('click', function () { closeModal(); });
+    $('#m-close').addEventListener('click', closeModal);
+    $('#m-print').addEventListener('click', async function () {
+      var ok = await printFlow(sale);
+      showSaleSuccess(sale, ok);
+    });
+  }
+
+  /* ---------------- Accueil ---------------- */
+  async function renderHomeStats() {
+    var today = todayISO();
+    var isAdmin = state.session.role === 'admin';
+    var sales = [];
+    try { sales = live(await DB.getAllSales()); } catch (e) {}
+    var day = sales.filter(function (s) { return s.date === today; });
+    $('#day-count').textContent = isAdmin ? day.length : '—';
+    $('#day-revenue').textContent = isAdmin
+      ? M.format(day.reduce(function (s, x) { return s + (x.total || 0); }, 0)) + ' F' : '—';
+    $('#day-date').textContent = frDate(today);
+    $('#demo-chip').hidden = !sales.some(function (s) { return s.demo; });
+  }
+  async function updateDatalist() {
+    try {
+      var sales = live(await DB.getAllSales());
+      var names = [];
+      sales.slice(0, 200).forEach(function (s) {
+        (s.items || []).forEach(function (i) {
+          if (i.name && names.indexOf(i.name) === -1) names.push(i.name);
+        });
+      });
+      $('#article-names').innerHTML = names.slice(0, 50).map(function (n) {
+        return '<option value="' + escapeHtml(n) + '">';
+      }).join('');
+    } catch (e) {}
+  }
+
+  /* ---------------- Historique ---------------- */
+  async function renderHistory() {
+    var today = todayISO();
+    var isAdmin = state.session.role === 'admin';
+    var sales = [];
+    try { sales = live(await DB.getAllSales()); } catch (e) {}
+    sales.sort(function (a, b) { return (b.createdAt || 0) - (a.createdAt || 0); });
+
+    var day = sales.filter(function (s) { return s.date === today; });
+    function money(sel, v) { $(sel).textContent = isAdmin ? M.format(v) + ' F' : '—'; }
+    $('#sum-count').textContent = isAdmin ? day.length : '—';
+    money('#sum-total', day.reduce(function (s, x) { return s + (x.total || 0); }, 0));
+    money('#sum-received', day.reduce(function (s, x) { return s + (x.received || 0); }, 0));
+    money('#sum-change', day.reduce(function (s, x) { return s + (x.change || 0); }, 0));
+    $('#summary-date').textContent = frDate(today);
+
+    var q = norm(state.hist.q.trim());
+    var list = sales;
+    if (state.hist.mode === 'day') list = list.filter(function (s) { return s.date === today; });
+    else if (state.hist.mode === 'date' && state.hist.date) list = list.filter(function (s) { return s.date === state.hist.date; });
+    if (q) {
+      list = list.filter(function (s) {
+        if (norm(s.number).indexOf(q) !== -1) return true;
+        if (norm(s.cashier).indexOf(q) !== -1) return true;
+        return (s.items || []).some(function (i) { return norm(i.name).indexOf(q) !== -1; });
+      });
+    }
+
+    var wrap = $('#hist-list');
+    wrap.innerHTML = '';
+    $('#hist-empty').hidden = list.length > 0;
+    list.slice(0, 300).forEach(function (s) {
+      var n = (s.items || []).length;
+      var b = document.createElement('button');
+      b.className = 'sale-row';
+      b.type = 'button';
+      b.innerHTML =
+        '<span class="sr-left"><b>' + escapeHtml(s.number || '') + '</b>' +
+        '<small>' + escapeHtml(s.time || '') + ' · ' + n + ' article' + (n > 1 ? 's' : '') +
+        (s.cashier ? ' · ' + escapeHtml(s.cashier) : '') + (s.demo ? ' · démo' : '') + '</small></span>' +
+        '<span class="sr-right"><b>' + M.format(s.total) + ' F</b>' +
+        '<small>' + (s.change > 0 ? 'monnaie ' + M.format(s.change) + ' F' : 'compte exact') + '</small></span>';
+      b.addEventListener('click', function () { openSaleDetail(s); });
+      wrap.appendChild(b);
+    });
+  }
+  function openSaleDetail(s) {
+    var rows = (s.items || []).map(function (i) {
+      return '<div class="m-item"><span class="mi-name">' + escapeHtml(i.name) + '</span>' +
+        '<span class="mi-qty">' + fmtQty(i.qty) + ' × ' + M.format(i.price) + ' F</span>' +
+        '<b>' + M.format(i.subtotal) + ' F</b></div>';
+    }).join('');
+    openModal(
+      '<p class="m-eyebrow">' + frDate(s.date) + ' · ' + escapeHtml(s.time || '') + '</p>' +
+      '<h3 class="m-title">Vente ' + escapeHtml(s.number || '') + '</h3>' +
+      '<div class="m-items">' + rows + '</div>' +
+      (s.cashier ? '<div class="m-kv"><span>Caissier</span><b>' + escapeHtml(s.cashier) + '</b></div>' : '') +
+      '<div class="m-kv"><span>Total</span><b>' + M.format(s.total) + ' F</b></div>' +
+      '<div class="m-kv"><span>Montant reçu</span><b>' + M.format(s.received) + ' F</b></div>' +
+      '<div class="m-kv"><span>Monnaie rendue</span><b>' + M.format(s.change) + ' F</b></div>' +
+      '<button class="btn print wide" id="m-pr" type="button">' + icon('print') + ' Imprimer le ticket</button>' +
+      '<div class="m-actions">' +
+        '<button class="btn danger-ghost" id="m-del" type="button">Supprimer</button>' +
+        '<button class="btn primary" id="m-close" type="button">Fermer</button>' +
+      '</div>');
+    $('#m-close').addEventListener('click', closeModal);
+    $('#m-pr').addEventListener('click', async function () {
+      await printFlow(s);
+      openSaleDetail(s);
+    });
+    $('#m-del').addEventListener('click', function () {
+      confirmDialog({
+        title: 'Supprimer la vente ?',
+        message: 'La vente ' + (s.number || '') + ' sera définitivement effacée' +
+                 (state.syncEnabled ? ' sur tous les appareils de la boutique.' : '.'),
+        confirmLabel: 'Supprimer',
+        onConfirm: function () { removeSale(s); }
+      });
+    });
+  }
+  function setFilterButtons() {
+    $('#hist-today').classList.toggle('active', state.hist.mode === 'day');
+    $('#hist-all').classList.toggle('active', state.hist.mode === 'all');
+    if (state.hist.mode !== 'all') $('#hist-date').value = state.hist.date || todayISO();
+  }
+
+  /* ---------------- Équipe (admin) ---------------- */
+  function renderTeam() {
+    var wrap = $('#team-list');
+    if (!wrap) return;
+    if (!state.cashiers.length) {
+      wrap.innerHTML = '<p class="hint">Aucun caissier pour le moment. Chaque caissier ouvre sa session avec son propre PIN ; ses ventes sont enregistrées à son nom.</p>';
+      return;
+    }
+    wrap.innerHTML = '';
+    state.cashiers.forEach(function (c) {
+      var row = document.createElement('div');
+      row.className = 'team-row';
+      row.innerHTML =
+        '<div class="team-main"><b>' + escapeHtml(c.name) + '</b>' +
+        '<small>PIN actif · depuis le ' + frDateTs(c.createdAt) + '</small></div>' +
+        '<button class="mini-btn" type="button" aria-label="Modifier">' + icon('edit') + '</button>' +
+        '<button class="mini-btn danger" type="button" aria-label="Supprimer">' + icon('trash') + '</button>';
+      var btns = row.querySelectorAll('.mini-btn');
+      btns[0].addEventListener('click', function () { cashierModal(c); });
+      btns[1].addEventListener('click', function () {
+        confirmDialog({
+          title: 'Supprimer ce caissier ?',
+          message: c.name + ' ne pourra plus ouvrir de session de caisse.',
+          confirmLabel: 'Supprimer',
+          onConfirm: function () {
+            state.cashiers = state.cashiers.filter(function (x) { return x !== c; });
+            DB.setSetting('cashiers', state.cashiers).catch(function () {});
+            renderTeam();
+            toast('Caissier supprimé');
+          }
+        });
+      });
+      wrap.appendChild(row);
+    });
+  }
+  function cashierModal(existing) {
+    openModal(
+      '<h3 class="m-title">' + (existing ? 'Modifier le caissier' : 'Nouveau caissier') + '</h3>' +
+      '<p class="m-text">Le caissier utilisera son PIN pour ouvrir sa session de caisse.</p>' +
+      '<div class="field" style="margin-top:12px">' +
+        '<label for="tc-name">Nom du caissier</label>' +
+        '<input id="tc-name" type="text" maxlength="20" autocomplete="off" value="' + escapeHtml(existing ? existing.name : '') + '">' +
+      '</div>' +
+      '<div class="m-actions">' +
+        '<button class="btn ghost" id="tc-cancel" type="button">Annuler</button>' +
+        '<button class="btn primary" id="tc-next" type="button">Continuer</button>' +
+      '</div>');
+    $('#tc-cancel').addEventListener('click', closeModal);
+    $('#tc-next').addEventListener('click', function () {
+      var name = $('#tc-name').value.trim();
+      if (!name) { toast('Saisissez un nom', 'warn'); return; }
+      var dup = state.cashiers.some(function (c) {
+        return c !== existing && norm(c.name) === norm(name);
+      });
+      if (dup) { toast('Ce nom existe déjà', 'warn'); return; }
+      closeModal();
+      openPinPad({
+        title: 'PIN de ' + name, subtitle: '4 chiffres', length: 4, confirm: true,
+        onSubmit: function (pin) {
+          if (existing) { existing.name = name; existing.pinHash = S.hashPin(pin); }
+          else {
+            state.cashiers.push({
+              id: 'c' + Date.now().toString(36),
+              name: name, pinHash: S.hashPin(pin), createdAt: Date.now()
+            });
+          }
+          DB.setSetting('cashiers', state.cashiers).catch(function () {});
+          renderTeam();
+          toast(existing ? 'Caissier mis à jour' : 'Caissier ajouté');
+          return true;
+        }
+      });
+    });
+  }
+
+  /* ---------------- Paramètres (UI) ---------------- */
+  function applySettingsToUI() {
+    $('#header-shop').textContent = state.settings.shopName;
+    $('#set-shop').value = state.settings.shopName;
+    state.hist.date = state.hist.date || todayISO();
+    $('#hist-date').value = state.hist.date;
+    $('#prt-width').value = String(state.settings.printerWidth || 80);
+    setFilterButtons();
+    renderPrinterUI();
+  }
+  function buildCutsSettings() {
+    var wrap = $('#cuts-list');
+    wrap.innerHTML = '';
+    ALL_CUTS.forEach(function (c) {
+      var on = state.settings.cuts.indexOf(c) !== -1;
+      var row = document.createElement('label');
+      row.className = 'cut-row';
+      row.innerHTML =
+        '<span class="cut-info"><b>' + M.format(c) + ' F</b>' +
+        '<small>' + (c >= 1000 ? 'billet' : 'pièce') + '</small></span>' +
+        '<input type="checkbox"' + (on ? ' checked' : '') + ' aria-label="Coupure ' + M.format(c) + ' F">';
+      row.querySelector('input').addEventListener('change', function (e) {
+        var cuts = state.settings.cuts.filter(function (v) { return v !== c; });
+        if (e.target.checked) cuts.push(c);
+        if (!cuts.length) {
+          e.target.checked = true;
+          toast('Gardez au moins une coupure active', 'warn');
+          return;
+        }
+        cuts.sort(function (a, b) { return b - a; });
+        state.settings.cuts = cuts;
+        saveSettings();
+        recomputeMoney();
+        recomputeSale();
+      });
+      wrap.appendChild(row);
+    });
+  }
+
+  /* ---------------- Export / Import / Réinitialisation ---------------- */
+  function download(filename, content, type) {
+    var blob = new Blob([content], { type: type });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+  async function exportCSV() {
+    var sales = live(await DB.getAllSales());
+    if (!sales.length) { toast('Aucune vente à exporter', 'warn'); return; }
+    sales.sort(function (a, b) { return (a.createdAt || 0) - (b.createdAt || 0); });
+    function esc(v) {
+      v = String(v == null ? '' : v);
+      return /[;"\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+    }
+    var lines = ['Numéro;Date;Heure;Caissier;Articles;Total (F CFA);Reçu (F CFA);Monnaie (F CFA)'];
+    sales.forEach(function (s) {
+      lines.push([
+        s.number, s.date, s.time, s.cashier || '',
+        (s.items || []).map(function (i) { return i.name + ' x' + fmtQty(i.qty) + ' @' + i.price + 'F'; }).join(' | '),
+        s.total, s.received, s.change
+      ].map(esc).join(';'));
+    });
+    download('caisse-express-ventes-' + todayISO() + '.csv', '\uFEFF' + lines.join('\r\n'), 'text/csv;charset=utf-8');
+    toast(sales.length + ' vente(s) exportée(s)');
+  }
+  async function exportJSON() {
+    var sales = await DB.getAllSales();
+    var data = {
+      app: 'Caisse Express', digiSolia: true,
+      exportedAt: new Date().toISOString(),
+      settings: state.settings, sales: sales
+    };
+    download('caisse-express-sauvegarde-' + todayISO() + '.json', JSON.stringify(data, null, 2), 'application/json');
+    toast('Sauvegarde créée');
+  }
+  function readFileText(file) {
+    return new Promise(function (res, rej) {
+      var r = new FileReader();
+      r.onload = function () { res(String(r.result)); };
+      r.onerror = function () { rej(r.error); };
+      r.readAsText(file);
+    });
+  }
+  async function importJSON(file) {
+    var data;
+    try { data = JSON.parse(await readFileText(file)); }
+    catch (e) { toast('Fichier illisible', 'err'); return; }
+    if (!data || !Array.isArray(data.sales)) { toast('Format de sauvegarde non reconnu', 'err'); return; }
+    var valid = data.sales.filter(function (s) {
+      return s && Array.isArray(s.items) && isFinite(M.toNumber(s.total));
+    });
+    if (!valid.length) { toast('Aucune vente valide dans ce fichier', 'warn'); return; }
+    confirmDialog({
+      title: 'Restaurer la sauvegarde ?',
+      message: valid.length + ' vente(s) vont remplacer les ventes actuelles.',
+      confirmLabel: 'Restaurer',
+      onConfirm: async function () {
+        try {
+          await DB.clearSales();
+          var counter = 0;
+          var now = Date.now();
+          for (var k = 0; k < valid.length; k++) {
+            var s = valid[k];
+            var n = parseInt(String(s.number || '').replace(/\D/g, ''), 10);
+            if (isFinite(n) && n > counter) counter = n;
+            var created = M.toNumber(s.createdAt) || now;
+            await DB.addSale({
+              number: s.number || ('V-' + pad4(Math.max(1, n))),
+              date: /^\d{4}-\d{2}-\d{2}$/.test(s.date || '') ? s.date : todayISO(),
+              time: /^\d{1,2}:\d{2}$/.test(s.time || '') ? s.time : '',
+              items: s.items.map(function (i) {
+                var q = M.parseQty(i.qty) > 0 ? M.parseQty(i.qty) : 1;
+                var p = M.clampAmount(M.toNumber(i.price));
+                return {
+                  name: String(i.name || 'Article'),
+                  qty: q, price: p,
+                  subtotal: M.clampAmount(M.toNumber(i.subtotal) || q * p)
+                };
+              }),
+              total: M.clampAmount(s.total),
+              received: M.clampAmount(s.received),
+              change: M.clampAmount(s.change),
+              cashier: String(s.cashier || ''),
+              demo: !!s.demo,
+              uid: s.uid || uuid(),
+              updatedAt: M.toNumber(s.updatedAt) || created,
+              dirty: true,
+              createdAt: created
+            });
+          }
+          if (data.settings && typeof data.settings === 'object') {
+            if (typeof data.settings.shopName === 'string' && data.settings.shopName.trim()) {
+              state.settings.shopName = data.settings.shopName.trim();
+            }
+            if (Array.isArray(data.settings.cuts)) {
+              var c = data.settings.cuts.filter(function (v) { return ALL_CUTS.indexOf(v) !== -1; });
+              if (c.length) state.settings.cuts = c.sort(function (a, b) { return b - a; });
+            }
+            if (data.settings.printerWidth === 58 || data.settings.printerWidth === 80) {
+              state.settings.printerWidth = data.settings.printerWidth;
+            }
+            await saveSettings();
+          }
+          await DB.setSetting('saleCounter', counter);
+          applySettingsToUI();
+          buildCutsSettings();
+          refreshData();
+          recomputeMoney();
+          recomputeSale();
+          if (state.syncEnabled) SY.schedule();
+          toast(valid.length + ' vente(s) restaurée(s)');
+        } catch (e) {
+          console.error(e);
+          toast('Restauration impossible', 'err');
+        }
+      }
+    });
+  }
+  function resetSalesAndPrefs() {
+    confirmDialog({
+      title: 'Réinitialiser ?',
+      message: 'Toutes les ventes, le nom de boutique et les coupures seront effacés' +
+               (state.syncEnabled ? ' sur cet appareil ET dans le cloud' : '') +
+               '. Votre abonnement et votre équipe sont conservés.',
+      confirmLabel: 'Tout effacer',
+      onConfirm: async function () {
+        try {
+          var now = Date.now();
+          if (state.syncEnabled) {
+            var all = await DB.getAllSales();
+            for (var i = 0; i < all.length; i++) {
+              var s = all[i];
+              if (!s.deleted) {
+                s.deleted = true; s.deletedAt = now;
+                s.updatedAt = now; s.dirty = true;
+                await DB.putSale(s);
+              }
+            }
+          } else {
+            await DB.clearSales();
+          }
+          var pw = state.settings.printerWidth;
+          state.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+          state.settings.printerWidth = pw || 80;
+          await DB.setSetting('settings', state.settings);
+          await DB.setSetting('saleCounter', 0);
+          applySettingsToUI();
+          buildCutsSettings();
+          resetSaleDraft();
+          refreshData();
+          recomputeMoney();
+          if (state.syncEnabled) SY.schedule();
+          toast('Ventes et réglages réinitialisés');
+        } catch (e) { toast('Réinitialisation impossible', 'err'); }
+      }
+    });
+  }
+  async function removeDemo() {
+    try {
+      var all = await DB.getAllSales();
+      var demo = all.filter(function (s) { return s.demo && !s.deleted; });
+      var now = Date.now();
+      for (var i = 0; i < demo.length; i++) {
+        var s = demo[i];
+        if (state.syncEnabled) {
+          s.deleted = true; s.deletedAt = now;
+          s.updatedAt = now; s.dirty = true;
+          await DB.putSale(s);
+        } else {
+          await DB.deleteSale(s.id);
+        }
+      }
+      if (state.syncEnabled) SY.schedule();
+      refreshData();
+      toast('Données de démonstration retirées');
+    } catch (e) { toast('Opération impossible', 'err'); }
+  }
+
+  /* ---------------- Données de démonstration ---------------- */
+  async function seedDemo() {
+    function mk(hoursAgo, items, received) {
+      var total = items.reduce(function (s, i) { return s + i.subtotal; }, 0);
+      var minToday = new Date(); minToday.setHours(0, 5, 0, 0);
+      var t = new Date(Math.max(minToday.getTime(), Date.now() - hoursAgo * 3600e3));
+      return {
+        date: todayISO(t),
+        time: pad2(t.getHours()) + ':' + pad2(t.getMinutes()),
+        items: items, total: total, received: received, change: received - total,
+        demo: true, createdAt: t.getTime()
+      };
+    }
+    var demos = [
+      mk(4, [
+        { name: 'Riz', qty: 2, price: 750, subtotal: 1500 },
+        { name: 'Huile', qty: 1, price: 1500, subtotal: 1500 },
+        { name: 'Sucre', qty: 2, price: 500, subtotal: 1000 }
+      ], 5000),
+      mk(2.5, [
+        { name: 'Savon', qty: 3, price: 350, subtotal: 1050 },
+        { name: 'Thé vert', qty: 1, price: 250, subtotal: 250 }
+      ], 2000),
+      mk(1, [
+        { name: 'Pâtes', qty: 4, price: 300, subtotal: 1200 },
+        { name: 'Lait', qty: 2, price: 650, subtotal: 1300 }
+      ], 2500)
+    ];
+    var c = await DB.getSetting('saleCounter', 0);
+    for (var i = 0; i < demos.length; i++) {
+      c++;
+      demos[i].number = 'V-' + pad4(c);
+      await DB.addSale(demos[i]);
+    }
+    await DB.setSetting('saleCounter', c);
+    await DB.setSetting('seeded', true);
+  }
+
+  /* ---------------- Connexion ---------------- */
+  function updateConn() {
+    var el = $('#conn-status');
+    var online = navigator.onLine;
+    el.classList.toggle('online', online);
+    el.querySelector('.conn-label').textContent = online ? 'Mode connecté' : 'Mode hors connexion';
+    if (online && state.syncEnabled) SY.schedule(2000);
+  }
+
+  /* ============ §6 PWA INTÉGRÉE ============ */
+  function setupPWA() {
+    function dataURI(svg) {
+      return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    }
+    function setLink(rel, href) {
+      var l = document.querySelector('link[rel="' + rel + '"]') || document.createElement('link');
+      l.rel = rel; l.href = href;
+      document.head.appendChild(l);
+    }
+    var ICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">' +
+      '<rect width="512" height="512" rx="96" fill="#146B3A"/>' +
+      '<path d="M172 124q0-16 16-16h136q16 0 16 16v248l-28 16-28-16-28 16-28-16-28 16-28-16Z" fill="#F7F3E8"/>' +
+      '<rect x="208" y="168" width="96" height="16" rx="8" fill="#146B3A"/>' +
+      '<rect x="208" y="204" width="66" height="12" rx="6" fill="#B7C6B9"/>' +
+      '<rect x="208" y="230" width="80" height="12" rx="6" fill="#B7C6B9"/>' +
+      '<rect x="200" y="272" width="112" height="42" rx="10" fill="#146B3A"/>' +
+      '<circle cx="356" cy="366" r="54" fill="#E9B949" stroke="#8A6210" stroke-width="9"/>' +
+      '<text x="356" y="386" font-family="Arial,Helvetica,sans-serif" font-size="56" font-weight="800" text-anchor="middle" fill="#5C420A">F</text></svg>';
+    var FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">' +
+      '<rect width="64" height="64" rx="14" fill="#146B3A"/>' +
+      '<circle cx="32" cy="32" r="19" fill="none" stroke="#F4F0E6" stroke-width="6"/>' +
+      '<circle cx="32" cy="32" r="8" fill="#F4F0E6"/></svg>';
+    setLink('icon', dataURI(FAVICON));
+    setLink('apple-touch-icon', dataURI(ICON));
+    var manifest = {
+      name: 'Caisse Express — DigiSolia',
+      short_name: 'Caisse',
+      description: 'Caisse rapide pour commerçants : monnaie, ventes, tickets, synchro. Hors connexion.',
+      lang: 'fr',
+      start_url: location.href.split('#')[0],
+      scope: location.href.replace(/[^/]*$/, ''),
+      display: 'standalone',
+      orientation: 'portrait',
+      background_color: '#F4F0E6',
+      theme_color: '#146B3A',
+      icons: [
+        { src: dataURI(ICON), sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        { src: dataURI(ICON), sizes: 'any', type: 'image/svg+xml', purpose: 'maskable' }
+      ],
+      shortcuts: [
+        { name: 'Calculer la monnaie', url: location.href.split('#')[0] + '#money' },
+        { name: 'Nouvelle vente', url: location.href.split('#')[0] + '#sale' }
+      ]
+    };
+    setLink('manifest', 'data:application/manifest+json;charset=utf-8,' +
+      encodeURIComponent(JSON.stringify(manifest)));
+  }
+  function installApp() {
+    if (state.installEvent) {
+      state.installEvent.prompt();
+      state.installEvent.userChoice.then(function () { state.installEvent = null; });
+      return;
+    }
+    openModal(
+      '<h3 class="m-title">Installer Caisse Express</h3>' +
+      '<p class="m-text">Dans Chrome Android : ouvrez le menu ⋮ en haut à droite, puis choisissez ' +
+      '« Installer l\'application » ou « Ajouter à l\'écran d\'accueil ». Sur ordinateur : icône d\'installation dans la barre d\'adresse.</p>' +
+      '<div class="m-actions"><button class="btn primary" id="m-close" type="button">Compris</button></div>');
+    $('#m-close').addEventListener('click', closeModal);
+  }
+
+  /* ---------------- Rafraîchissement global ---------------- */
+  function refreshData() {
+    renderHomeStats();
+    renderHistory();
+    updateDatalist();
+  }
+
+  /* ---------------- Événements ---------------- */
+  function bindEvents() {
+    $('#tile-money').addEventListener('click', function () { go('money'); recomputeMoney(); });
+    $('#tile-sale').addEventListener('click', function () { go('sale'); });
+    $('#tile-history').addEventListener('click', function () { go('history'); });
+    $$('.tabbar button').forEach(function (b) {
+      b.addEventListener('click', function () { go(b.dataset.nav); });
+    });
+    $('#money-back').addEventListener('click', function () { go('home'); });
+    $('#day-card').addEventListener('click', function () { go('history'); });
+    $('#demo-clear').addEventListener('click', function (e) { e.stopPropagation(); removeDemo(); });
+    $('#btn-lock').addEventListener('click', function () { lockNow(); });
+
+    attachMoneyInput($('#pay-amount'), function (v) { state.calc.pay = v; recomputeMoney(); });
+    attachMoneyInput($('#recv-amount'), function (v) { state.calc.recv = v; recomputeMoney(); });
+    $('#quick-money').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-add]');
+      if (b) {
+        var nv = M.clampAmount(state.calc.recv + M.toNumber(b.dataset.add));
+        state.calc.recv = nv;
+        $('#recv-amount').value = M.format(nv);
+        recomputeMoney(); return;
+      }
+      if (e.target.closest('#btn-equal')) {
+        var v = M.clampAmount(state.calc.pay);
+        state.calc.recv = v;
+        $('#recv-amount').value = v ? M.format(v) : '';
+        recomputeMoney(); return;
+      }
+      if (e.target.closest('#btn-clear-money')) {
+        state.calc = { pay: 0, recv: 0 };
+        $('#pay-amount').value = '';
+        $('#recv-amount').value = '';
+        recomputeMoney();
+      }
+    });
+
+    $('#btn-add-item').addEventListener('click', function () { addSaleLine(null, true); });
+    $('#btn-reset-sale').addEventListener('click', function () { resetSaleDraft(); toast('Vente vidée'); });
+    attachMoneyInput($('#sale-received'), function (v) { state.sale.received = v; recomputeSale(); });
+    $('#quick-sale').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-add]');
+      if (b) {
+        var nv = M.clampAmount(state.sale.received + M.toNumber(b.dataset.add));
+        state.sale.received = nv;
+        $('#sale-received').value = M.format(nv);
+        recomputeSale(); return;
+      }
+      if (e.target.closest('#btn-sale-equal')) {
+        var v = M.clampAmount(state.sale.total);
+        state.sale.received = v;
+        $('#sale-received').value = v ? M.format(v) : '';
+        recomputeSale();
+      }
+    });
+    $('#btn-validate').addEventListener('click', function () { validateSale(false); });
+    $('#btn-validate-print').addEventListener('click', function () { validateSale(true); });
+    $('#btn-new-sale-hist').addEventListener('click', function () { go('sale'); });
+
+    $('#hist-q').addEventListener('input', debounce(function (e) {
+      state.hist.q = e.target.value; renderHistory();
+    }, 200));
+    $('#hist-date').addEventListener('change', function (e) {
+      state.hist.mode = 'date';
+      state.hist.date = e.target.value;
+      setFilterButtons(); renderHistory();
+    });
+    $('#hist-today').addEventListener('click', function () {
+      state.hist.mode = 'day';
+      state.hist.date = todayISO();
+      setFilterButtons(); renderHistory();
+    });
+    $('#hist-all').addEventListener('click', function () {
+      state.hist.mode = 'all';
+      setFilterButtons(); renderHistory();
+    });
+
+    $('#btn-enter-code').addEventListener('click', openEnterCodeModal);
+    $('#exp-banner').addEventListener('click', openEnterCodeModal);
+    $('#btn-admin-pin').addEventListener('click', function () {
+      openPinPad({
+        title: 'Nouveau PIN administrateur', subtitle: '4 chiffres', length: 4, confirm: true,
+        onSubmit: function (pin) {
+          state.adminPinHash = S.hashPin(pin);
+          DB.setSetting('adminPinHash', state.adminPinHash).catch(function () {});
+          toast('PIN administrateur modifié');
+          return true;
+        }
+      });
+    });
+    $('#btn-add-cashier').addEventListener('click', function () { cashierModal(null); });
+
+    /* Synchronisation */
+    $('#btn-sync-toggle').addEventListener('click', toggleSync);
+    $('#btn-sync-now').addEventListener('click', async function () {
+      if (!state.syncEnabled) { toast('Activez d\'abord la synchronisation', 'warn'); return; }
+      toast('Synchronisation…');
+      await SY.syncNow(false);
+    });
+    $('#btn-sync-id').addEventListener('click', function () {
+      if (!state.shopId) { toast('Activez d\'abord la synchronisation', 'warn'); return; }
+      copyText(state.shopId);
+    });
+    $('#btn-sync-join').addEventListener('click', joinShopModal);
+
+    /* Imprimante */
+    $('#prt-connect').addEventListener('click', async function () {
+      if (!P.supported()) { explainPrintModal(); return; }
+      if (P.connected()) {
+        P.forget();
+        renderPrinterUI();
+        toast('Imprimante déconnectée');
+        return;
+      }
+      await pairPrinterModal();
+      renderPrinterUI();
+    });
+    $('#prt-test').addEventListener('click', testPrint);
+    $('#prt-width').addEventListener('change', function (e) {
+      var mm = parseInt(e.target.value, 10) === 58 ? 58 : 80;
+      state.settings.printerWidth = mm;
+      saveSettings();
+      toast('Papier réglé sur ' + mm + ' mm');
+    });
+
+    $('#set-shop').addEventListener('input', debounce(function (e) {
+      var v = e.target.value.trim();
+      if (v) {
+        state.settings.shopName = v;
+        saveSettings();
+        $('#header-shop').textContent = v;
+      }
+    }, 400));
+    $('#btn-export-csv').addEventListener('click', function () {
+      exportCSV().catch(function (e) { console.error(e); toast('Export impossible', 'err'); });
+    });
+    $('#btn-export-json').addEventListener('click', function () {
+      exportJSON().catch(function (e) { console.error(e); toast('Sauvegarde impossible', 'err'); });
+    });
+    $('#btn-import').addEventListener('click', function () { $('#file-import').click(); });
+    $('#file-import').addEventListener('change', function (e) {
+      var f = e.target.files[0];
+      if (f) importJSON(f);
+      e.target.value = '';
+    });
+    $('#btn-reset-data').addEventListener('click', resetSalesAndPrefs);
+    $('#btn-install').addEventListener('click', installApp);
+
+    window.addEventListener('online', updateConn);
+    window.addEventListener('offline', updateConn);
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      state.installEvent = e;
+      $('#install-hint').textContent = 'Application prête : appuyez sur « Installer l\'application » ci-dessus.';
+    });
+    window.addEventListener('appinstalled', function () { toast('Application installée'); });
+  }
+
+  /* ---------------- Démarrage ---------------- */
+  async function boot() {
+    setupPWA();
+    try { await loadSettings(); }
+    catch (e) {
+      console.error(e);
+      toast('Base de données inaccessible : les données ne seront pas sauvegardées', 'err');
+    }
+    try {
+      state.license      = await DB.getSetting('license', null);
+      state.trialStart   = await DB.getSetting('trialStart', 0);
+      state.adminPinHash = await DB.getSetting('adminPinHash', null);
+      state.cashiers     = await DB.getSetting('cashiers', []);
+      state.saasCodes    = await DB.getSetting('saasCodes', []);
+      state.superPinHash = await DB.getSetting('superPinHash', null);
+      state.shopId       = await DB.getSetting('shopId', null);
+      state.syncEnabled  = (await DB.getSetting('syncEnabled', false)) === true;
+      if (!Array.isArray(state.cashiers)) state.cashiers = [];
+      if (!Array.isArray(state.saasCodes)) state.saasCodes = [];
+      if (!state.trialStart) {
+        state.trialStart = Date.now();
+        await DB.setSetting('trialStart', state.trialStart);
+      }
+      SY.prime(await DB.getSetting('lastSyncAt', 0));
+    } catch (e) { console.warn('SaaS/Sync :', e); }
+    try {
+      if ((await DB.getSetting('seeded', false)) === false) await seedDemo();
+    } catch (e) { console.warn('Démo :', e); }
+
+    applySettingsToUI();
+    buildCutsSettings();
+    resetSaleDraft();
+    bindEvents();
+    updateConn();
+    updateSubUI();
+    updateSyncUI();
+    refreshData();
+    recomputeMoney();
+
+    bindTripleTap($('#header-brand'), openSuperPin);
+    bindTripleTap($('#lock-brand'), openSuperPin);
+
+    if (location.hash === '#money') state.startView = 'money';
+    else if (location.hash === '#sale') state.startView = 'sale';
+
+    lockNow();
+
+    if (state.syncEnabled && navigator.onLine) {
+      setTimeout(function () { SY.syncNow(true); }, 2500);
+    }
+    setInterval(function () {
+      if (state.syncEnabled && navigator.onLine) SY.syncNow(true);
+    }, 5 * 60 * 1000);
+
+    setInterval(function () {
+      if (state.session.role && !licenseState().ok) {
+        lockNow('activation');
+        toast('Abonnement expiré', 'warn');
+      }
+      updateSubUI();
+    }, 60000);
+  }
+
+  window.addEventListener('error', function (e) {
+    console.error(e.error || e.message);
+  });
+
+  boot().catch(function (e) {
+    console.error(e);
+    toast('Erreur au démarrage de l\'application', 'err');
+  });
+
+  /* API publique pour les futurs modules */
+  window.CX = {
+    version: '2.2.1',
+    money: M,
+    db: DB,
+    printer: P,
+    sync: SY,
+    hooks: hooks,
+    saas: {
+      PLANS: S.PLANS,
+      generate: S.make,
+      decode: S.decode,
+      licenseState: licenseState
+    },
+    api: {
+      toast: toast,
+      openModal: openModal,
+      confirmDialog: confirmDialog,
+      printTicket: printFlow,
+      settings: function () { return state.settings; },
+      session: function () { return state.session; },
+      refresh: refreshData
+    }
+  };
+})();
+</script>
+</body>
+</html>
